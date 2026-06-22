@@ -1,0 +1,1082 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Christina Doolan — iPad Navigation & Core Flow Redesign</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter+Tight:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Instrument+Serif:ital@0;1&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+      html { scroll-behavior: smooth; }
+      html, body {
+        background: #F2EEE6;
+        font-family: "Inter Tight", system-ui, sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+      body { cursor: none; }
+      a { color: inherit; text-decoration: none; }
+      ::-webkit-scrollbar { width: 10px; }
+      ::-webkit-scrollbar-track { background: #E8E2D4; }
+      ::-webkit-scrollbar-thumb { background: rgba(10,14,26,0.2); border-radius: 5px; }
+      #root { width: 100%; }
+    </style>
+
+    <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" crossorigin="anonymous"></script>
+    <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" crossorigin="anonymous"></script>
+    <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+      const { useState, useEffect, useRef, Fragment } = React;
+
+      /* ─── DESIGN TOKENS ──────────────────────────────────────────────── */
+      const C = {
+        bg:        "#F2EEE6",
+        card:      "#FFFFFF",
+        ink:       "#0A0E1A",
+        ink2:      "rgba(10,14,26,0.7)",
+        ink3:      "rgba(10,14,26,0.5)",
+        rule:      "rgba(10,14,26,0.12)",
+        coral:     "#FF5C2A",
+        coralSoft: "#FFE9DD",
+      };
+      const sans  = '"Inter Tight", system-ui, sans-serif';
+      const serif = '"Instrument Serif", "Times New Roman", serif';
+
+      /* ─── ORB V2 ─────────────────────────────────────────────────────── */
+      const OrbV2 = ({ containerRef, themeColor = "#FF5C2A", scrollProgress = 0 }) => {
+        const orbRef = useRef(null);
+        const rafRef = useRef(null);
+        const targetRef  = useRef({ x: 0.5, y: 0.5 });
+        const currentRef = useRef({ x: 0.5, y: 0.4 });
+        const tRef = useRef(0);
+
+        useEffect(() => {
+          const el = orbRef.current;
+          if (!el) return;
+          const container = containerRef?.current || el.parentElement;
+          const onMove = (e) => {
+            if (!container) return;
+            const r = container.getBoundingClientRect();
+            targetRef.current = {
+              x: Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)),
+              y: Math.max(0, Math.min(1, (e.clientY - r.top)  / r.height)),
+            };
+          };
+          const tick = () => {
+            tRef.current += 0.005;
+            const t = tRef.current;
+            const driftX = 0.5 + Math.sin(t * 0.6) * 0.18;
+            const driftY = 0.4 + Math.cos(t * 0.5) * 0.14;
+            const blend  = 0.4;
+            const tx = driftX * (1 - blend) + targetRef.current.x * blend;
+            const ty = driftY * (1 - blend) + targetRef.current.y * blend;
+            const ease = 0.05;
+            currentRef.current.x += (tx - currentRef.current.x) * ease;
+            currentRef.current.y += (ty - currentRef.current.y) * ease;
+            const cx = currentRef.current.x * 100;
+            const cy = currentRef.current.y * 100;
+            el.style.transform = `translate3d(${cx - 50}%, ${cy - 50}%, 0) rotate(${Math.sin(t * 0.3) * 12}deg)`;
+            rafRef.current = requestAnimationFrame(tick);
+          };
+          if (container) container.addEventListener("mousemove", onMove);
+          rafRef.current = requestAnimationFrame(tick);
+          return () => {
+            cancelAnimationFrame(rafRef.current);
+            if (container) container.removeEventListener("mousemove", onMove);
+          };
+        }, [containerRef]);
+
+        const gradient = `radial-gradient(circle at 30% 30%, #FFE3B0 0%, ${themeColor} 35%, #FFB3D1 65%, #C7DBFF 100%)`;
+        const size = 600 + scrollProgress * 200;
+        return (
+          <div ref={orbRef} style={{
+            position: "absolute", left: "50%", top: "50%",
+            width: size, height: size,
+            marginLeft: -size / 2, marginTop: -size / 2,
+            borderRadius: "50%",
+            background: gradient,
+            filter: "blur(40px) saturate(1.15)",
+            opacity: 0.78,
+            pointerEvents: "none",
+            willChange: "transform, background",
+            mixBlendMode: "multiply",
+            transition: "background 1.2s ease, width 1s ease, height 1s ease, margin 1s ease",
+          }} />
+        );
+      };
+
+      /* ─── COLOR CURSOR ───────────────────────────────────────────────── */
+      const ColorCursor = ({ containerRef }) => {
+        const [pos,     setPos]     = useState({ x: -200, y: -200 });
+        const [variant, setVariant] = useState("default");
+        const [visible, setVisible] = useState(false);
+
+        useEffect(() => {
+          const el = containerRef?.current;
+          if (!el) return;
+          const onMove = (e) => {
+            const r = el.getBoundingClientRect();
+            setPos({ x: e.clientX - r.left, y: e.clientY - r.top });
+            setVisible(true);
+            let t = e.target; let v = "default";
+            while (t && t !== el) {
+              if (t.dataset?.cursor) { v = t.dataset.cursor; break; }
+              t = t.parentElement;
+            }
+            setVariant(v);
+          };
+          const onLeave = () => setVisible(false);
+          el.addEventListener("mousemove", onMove);
+          el.addEventListener("mouseleave", onLeave);
+          return () => { el.removeEventListener("mousemove", onMove); el.removeEventListener("mouseleave", onLeave); };
+        }, [containerRef]);
+
+        const variants = {
+          default: { size: 16,  color: "#FF5C2A", blend: "normal",    label: null },
+          art:     { size: 28,  color: "#FFFFFF", blend: "difference", label: null },
+          footer:  { size: 60,  color: "#FF5C2A", blend: "normal",     label: "✶" },
+          link:    { size: 36,  color: "#FF5C2A", blend: "normal",     label: null },
+        };
+        const v = variants[variant] || variants.default;
+
+        return (
+          <div style={{
+            position: "fixed",
+            left: pos.x, top: pos.y,
+            width: v.size, height: v.size,
+            marginLeft: -v.size / 2, marginTop: -v.size / 2,
+            borderRadius: "50%", background: v.color,
+            mixBlendMode: v.blend,
+            pointerEvents: "none", zIndex: 9999,
+            transition: "width .25s cubic-bezier(.2,.9,.2,1), height .25s cubic-bezier(.2,.9,.2,1), margin .25s cubic-bezier(.2,.9,.2,1), background .25s, opacity .2s",
+            opacity: visible ? 1 : 0,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            color: "#fff", fontFamily: sans, fontSize: 11, fontWeight: 600,
+            letterSpacing: "0.14em", textTransform: "uppercase",
+          }}>
+            {v.label}
+          </div>
+        );
+      };
+
+      /* ─── REUSABLE PRIMITIVES ────────────────────────────────────────── */
+      const Label = ({ children, color = C.coral }) => (
+        <div style={{ fontFamily: sans, fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase", color, fontWeight: 600, marginBottom: 14 }}>{children}</div>
+      );
+
+      const SectionTitle = ({ children, italic = false, size = 56 }) => (
+        <h2 style={{ fontFamily: italic ? serif : sans, fontStyle: italic ? "italic" : "normal", fontWeight: italic ? 400 : 600, fontSize: size, lineHeight: 1.02, letterSpacing: italic ? "-0.015em" : "-0.03em", color: C.ink, margin: 0 }}>{children}</h2>
+      );
+
+      const Body = ({ children, size = 17, color = C.ink2 }) => (
+        <p style={{ fontFamily: sans, fontSize: size, lineHeight: 1.6, color, margin: "0 0 16px" }}>{children}</p>
+      );
+
+      const Rule = () => <div style={{ height: 1, background: C.rule }} />;
+
+      const TwoCol = ({ left, right, gap = 80 }) => (
+        <div style={{ display: "grid", gridTemplateColumns: "35fr 60fr", gap }}>
+          <div>{left}</div>
+          <div>{right}</div>
+        </div>
+      );
+
+      /* ─── IPAD FRAME ─────────────────────────────────────────────────── */
+      const IPad = ({ children, label, style = {}, screenBg = "#fff" }) => (
+        <div style={{ width: "100%", ...style }}>
+          <div style={{ aspectRatio: "4 / 3", borderRadius: 22, border: `2px solid ${C.ink}`, background: "#0A0E1A", padding: 10, position: "relative", boxShadow: "0 4px 20px rgba(10,14,26,0.08)" }}>
+            <div style={{ position: "absolute", inset: 10, borderRadius: 14, background: screenBg, overflow: "hidden" }}>
+              {/* Status bar */}
+              <div style={{ height: 22, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 14px", fontFamily: sans, fontSize: 9, color: C.ink, fontWeight: 600, letterSpacing: "0.04em" }}>
+                <span>09:41 · HND</span>
+                <span style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                  <span>5G</span><span>·</span>
+                  <span style={{ display: "inline-block", width: 18, height: 8, border: `1px solid ${C.ink}`, borderRadius: 2, position: "relative" }}>
+                    <span style={{ position: "absolute", inset: 1, right: 6, background: C.ink, borderRadius: 1 }} />
+                  </span>
+                </span>
+              </div>
+              <div style={{ position: "absolute", inset: "22px 0 0 0" }}>{children}</div>
+            </div>
+          </div>
+          {label && (
+            <div style={{ fontFamily: sans, fontSize: 10, letterSpacing: "0.14em", textTransform: "uppercase", color: C.ink3, textAlign: "center", marginTop: 10 }}>{label}</div>
+          )}
+        </div>
+      );
+
+      /* ─── RAMP OPS SCREEN MOCK ───────────────────────────────────────── */
+      const RampOpsScreen = ({ variant = "task", light = true }) => {
+        const bg      = light ? "#F8F6F1" : "#0F121C";
+        const surface = light ? "#FFFFFF"  : "#181C28";
+        const text    = light ? C.ink      : "#F5F3EE";
+        const subtext = light ? C.ink3     : "rgba(245,243,238,0.55)";
+        const ruleC   = light ? C.rule     : "rgba(255,255,255,0.08)";
+
+        if (variant === "nav") {
+          return (
+            <div style={{ width: "100%", height: "100%", background: bg, display: "flex", flexDirection: "column" }}>
+              <div style={{ display: "flex", gap: 4, padding: "10px 14px", borderBottom: `1px solid ${ruleC}`, alignItems: "center" }}>
+                <div style={{ width: 18, height: 18, borderRadius: 4, background: C.coral }} />
+                {["Shift", "Flights", "Crew", "Tasks", "Equip."].map((t, i) => (
+                  <div key={t} style={{ fontFamily: sans, fontSize: 9, fontWeight: 600, color: i === 2 ? "#fff" : text, background: i === 2 ? C.ink : "transparent", padding: "4px 9px", borderRadius: 999, letterSpacing: "0.02em" }}>{t}</div>
+                ))}
+                <div style={{ marginLeft: "auto", display: "flex", gap: 6, alignItems: "center" }}>
+                  <div style={{ width: 6, height: 6, borderRadius: 999, background: "#2E7B4E" }} />
+                  <span style={{ fontFamily: sans, fontSize: 8, color: subtext, letterSpacing: "0.08em" }}>RADIO 7 · LIVE</span>
+                </div>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "120px 1fr 130px", gap: 0, flex: 1 }}>
+                <div style={{ borderRight: `1px solid ${ruleC}`, padding: "10px 8px" }}>
+                  {["LM K. Sato", "Crew of 8", "Bay 18 · 21 · 24"].map((s, i) => (
+                    <div key={s} style={{ fontFamily: sans, fontSize: 8, color: i === 0 ? text : subtext, fontWeight: i === 0 ? 700 : 500, marginBottom: 6, lineHeight: 1.4 }}>{s}</div>
+                  ))}
+                  <div style={{ marginTop: 10, fontFamily: sans, fontSize: 7, color: subtext, letterSpacing: "0.14em" }}>CREW</div>
+                  {["Tanaka", "Suzuki", "Watanabe", "Ito"].map((n, i) => (
+                    <div key={n} style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 4 }}>
+                      <div style={{ width: 12, height: 12, borderRadius: 999, background: i === 1 ? "#FFE3CC" : ruleC, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: sans, fontSize: 6, color: text, fontWeight: 700 }}>{n[0]}</div>
+                      <div style={{ fontFamily: sans, fontSize: 7, color: text }}>{n}</div>
+                      {i === 1 && <div style={{ marginLeft: "auto", width: 5, height: 5, borderRadius: 999, background: C.coral }} />}
+                    </div>
+                  ))}
+                </div>
+                <div style={{ padding: "10px 12px", overflow: "hidden" }}>
+                  {[
+                    { code: "NH204", time: "09:18 → 10:05", bay: "Bay 18", state: "OFFBLOCK · 18m",    warn: false, due: "Pushback 09:36" },
+                    { code: "NH872", time: "09:42 → 11:20", bay: "Bay 21", state: "Fueling 02:14",     warn: false, due: "Bag offload due" },
+                    { code: "NH318", time: "10:05 → 12:40", bay: "Bay 24", state: "Crew unassigned",   warn: true,  due: "Action required" },
+                    { code: "NH426", time: "10:30 → 13:15", bay: "Bay 18", state: "Tentative",         warn: false, due: "Holds until 09:55" },
+                  ].map((t) => (
+                    <div key={t.code} style={{ background: surface, border: `1px solid ${t.warn ? C.coral : ruleC}`, borderRadius: 8, padding: "8px 10px", marginBottom: 6, display: "grid", gridTemplateColumns: "44px 1fr 90px 60px", alignItems: "center", gap: 8 }}>
+                      <div style={{ fontFamily: sans, fontWeight: 700, fontSize: 11, color: text, letterSpacing: "-0.01em" }}>{t.code}</div>
+                      <div>
+                        <div style={{ fontFamily: sans, fontSize: 8, color: subtext, fontVariantNumeric: "tabular-nums" }}>{t.time}</div>
+                        <div style={{ fontFamily: sans, fontSize: 8, color: text, fontWeight: 600, marginTop: 2 }}>{t.bay}</div>
+                      </div>
+                      <div style={{ fontFamily: sans, fontSize: 8, color: t.warn ? C.coral : text, fontWeight: 600 }}>{t.state}</div>
+                      <div style={{ fontFamily: sans, fontSize: 7, color: subtext, fontVariantNumeric: "tabular-nums", textAlign: "right" }}>{t.due}</div>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ borderLeft: `1px solid ${ruleC}`, padding: "10px 8px" }}>
+                  <div style={{ fontFamily: sans, fontSize: 7, color: subtext, letterSpacing: "0.14em" }}>NEXT UP</div>
+                  <div style={{ fontFamily: sans, fontSize: 10, fontWeight: 700, color: text, marginTop: 6 }}>09:36</div>
+                  <div style={{ fontFamily: sans, fontSize: 8, color: subtext }}>Pushback NH204</div>
+                  <button style={{ marginTop: 10, width: "100%", background: C.coral, color: "#fff", border: "none", padding: "8px 6px", borderRadius: 6, fontFamily: sans, fontSize: 9, fontWeight: 700, letterSpacing: "0.04em", cursor: "none" }}>ACKNOWLEDGE</button>
+                  <div style={{ marginTop: 10, fontFamily: sans, fontSize: 7, color: subtext, letterSpacing: "0.14em" }}>BATTERY</div>
+                  <div style={{ marginTop: 4, fontFamily: sans, fontSize: 11, fontWeight: 700, color: text, fontVariantNumeric: "tabular-nums" }}>74%</div>
+                </div>
+              </div>
+            </div>
+          );
+        }
+
+        // task / shift view
+        return (
+          <div style={{ width: "100%", height: "100%", background: bg, display: "flex", flexDirection: "column" }}>
+            <div style={{ display: "flex", gap: 4, padding: "10px 14px", borderBottom: `1px solid ${ruleC}`, alignItems: "center" }}>
+              <div style={{ width: 18, height: 18, borderRadius: 4, background: C.coral }} />
+              {["Shift", "Flights", "Crew", "Tasks", "Equip."].map((t, i) => (
+                <div key={t} style={{ fontFamily: sans, fontSize: 9, fontWeight: 600, color: i === 3 ? "#fff" : text, background: i === 3 ? C.ink : "transparent", padding: "4px 9px", borderRadius: 999 }}>{t}</div>
+              ))}
+              <div style={{ marginLeft: "auto", fontFamily: sans, fontSize: 8, color: subtext, letterSpacing: "0.08em" }}>SHIFT 06:00–18:00 · LM K. SATO</div>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 220px", flex: 1 }}>
+              <div style={{ padding: "10px 14px", overflow: "hidden" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 8 }}>
+                  <div>
+                    <div style={{ fontFamily: sans, fontSize: 8, color: subtext, letterSpacing: "0.14em" }}>NH204 · BAY 18 · A350-900</div>
+                    <div style={{ fontFamily: sans, fontWeight: 700, fontSize: 16, color: text, letterSpacing: "-0.02em", marginTop: 2 }}>Turnaround · 18 min to pushback</div>
+                  </div>
+                  <div style={{ fontFamily: sans, fontSize: 9, fontWeight: 700, color: C.coral, padding: "3px 8px", border: `1px solid ${C.coral}`, borderRadius: 999, letterSpacing: "0.08em" }}>OFFBLOCK</div>
+                </div>
+                {/* progress bar */}
+                <div style={{ height: 8, borderRadius: 4, background: ruleC, position: "relative", marginBottom: 12 }}>
+                  <div style={{ position: "absolute", inset: 0, width: "62%", background: C.coral, borderRadius: 4 }} />
+                  <div style={{ position: "absolute", left: "62%", top: -3, width: 14, height: 14, borderRadius: 999, background: "#fff", border: `2px solid ${C.coral}` }} />
+                </div>
+                {[
+                  { t: "Walk-around", time: "08:58",         state: "Confirmed",         by: "Tanaka",    done: true  },
+                  { t: "Fueling",     time: "09:02 — 09:24", state: "In progress · 02:14", by: "Suzuki",  active: true },
+                  { t: "Bag offload", time: "09:08",         state: "Awaiting ack",      by: "Watanabe",  warn: true  },
+                  { t: "Catering",    time: "09:14",         state: "On-time",           by: "Ito"                    },
+                ].map((row, i) => (
+                  <div key={i} style={{ display: "grid", gridTemplateColumns: "16px 1fr 110px 60px", gap: 8, alignItems: "center", background: row.active ? (light ? "#FFF3EA" : "rgba(255,92,42,0.12)") : surface, border: `1px solid ${row.warn ? C.coral : ruleC}`, borderRadius: 8, padding: "8px 10px", marginBottom: 5 }}>
+                    <div style={{ width: 14, height: 14, borderRadius: 4, border: `2px solid ${row.done ? "#2E7B4E" : row.warn ? C.coral : subtext}`, background: row.done ? "#2E7B4E" : "transparent", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 8, fontWeight: 800 }}>{row.done ? "✓" : ""}</div>
+                    <div>
+                      <div style={{ fontFamily: sans, fontSize: 10, fontWeight: 700, color: text }}>{row.t}</div>
+                      <div style={{ fontFamily: sans, fontSize: 8, color: subtext, fontVariantNumeric: "tabular-nums", marginTop: 1 }}>{row.time}</div>
+                    </div>
+                    <div style={{ fontFamily: sans, fontSize: 9, color: row.warn ? C.coral : text, fontWeight: 600 }}>{row.state}</div>
+                    <div style={{ fontFamily: sans, fontSize: 8, color: subtext, textAlign: "right" }}>{row.by}</div>
+                  </div>
+                ))}
+              </div>
+              <div style={{ borderLeft: `1px solid ${ruleC}`, padding: "10px 12px" }}>
+                <div style={{ fontFamily: sans, fontSize: 7, color: subtext, letterSpacing: "0.14em" }}>UPCOMING · UNCONFIRMED</div>
+                {[["09:42","NH872 · fuel"],["10:05","NH318 · tow"],["10:30","NH426 · bag load"]].map(([t, l]) => (
+                  <div key={t} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: `1px dashed ${ruleC}` }}>
+                    <div style={{ fontFamily: sans, fontSize: 9, color: text, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>{t}</div>
+                    <div style={{ fontFamily: sans, fontSize: 8, color: subtext }}>{l}</div>
+                  </div>
+                ))}
+                <div style={{ marginTop: 14, fontFamily: sans, fontSize: 7, color: subtext, letterSpacing: "0.14em" }}>BREAK</div>
+                <div style={{ marginTop: 4, fontFamily: sans, fontSize: 11, fontWeight: 700, color: text, fontVariantNumeric: "tabular-nums" }}>11:15 — 11:45</div>
+                <button style={{ marginTop: 14, width: "100%", background: C.ink, color: "#fff", border: "none", padding: "10px 8px", borderRadius: 8, fontFamily: sans, fontSize: 10, fontWeight: 700, letterSpacing: "0.06em", cursor: "none" }}>ACKNOWLEDGE TASK</button>
+              </div>
+            </div>
+          </div>
+        );
+      };
+
+      /* ─── WIREFRAME BODIES ───────────────────────────────────────────── */
+      const WireBody = ({ kind }) => {
+        const bar = (key, h, w = "100%", color = C.rule) => (
+          <div key={key} style={{ height: h, width: w, background: color, borderRadius: 3 }} />
+        );
+        if (kind === "left") return (
+          <div style={{ display: "grid", gridTemplateColumns: "70px 1fr", gap: 0, height: "100%", padding: 10 }}>
+            <div style={{ background: C.rule, borderRadius: 6, padding: 6, display: "flex", flexDirection: "column", gap: 6 }}>
+              {Array.from({ length: 5 }).map((_, i) => <div key={i} style={{ height: 8, background: "rgba(255,255,255,0.6)", borderRadius: 2 }} />)}
+            </div>
+            <div style={{ padding: 8, display: "flex", flexDirection: "column", gap: 6 }}>
+              {bar("a",10,"50%")}{bar("b",28)}{bar("c",28)}{bar("d",28)}{bar("e",28)}
+            </div>
+          </div>
+        );
+        if (kind === "topcards") return (
+          <div style={{ padding: 10, display: "flex", flexDirection: "column", gap: 6 }}>
+            <div style={{ display: "flex", gap: 4 }}>{Array.from({ length: 5 }).map((_, i) => bar("t"+i, 10, 44, i===1 ? C.coral : C.rule))}</div>
+            {[1,2,3,4].map(i => (
+              <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 4 }}>
+                {bar("a",20)}{bar("b",20)}{bar("c",20)}
+              </div>
+            ))}
+          </div>
+        );
+        if (kind === "rightcrew") return (
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 80px", gap: 0, height: "100%", padding: 10 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>{bar("a",12,"60%")}{bar("b",34)}{bar("c",34)}{bar("d",34)}</div>
+            <div style={{ background: C.rule, marginLeft: 8, borderRadius: 6, padding: 8 }}>
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} style={{ display: "flex", gap: 4, alignItems: "center", marginBottom: 5 }}>
+                  <div style={{ width: 10, height: 10, borderRadius: 999, background: "rgba(255,255,255,0.65)" }} />
+                  <div style={{ flex: 1, height: 4, background: "rgba(255,255,255,0.55)", borderRadius: 2 }} />
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+        if (kind === "timeline") return (
+          <div style={{ padding: 10 }}>
+            {bar("hdr", 8, "40%")}
+            <div style={{ height: 12, background: C.rule, borderRadius: 6, marginTop: 12, position: "relative" }}>
+              <div style={{ position: "absolute", left: "20%", top: 0, bottom: 0, width: "35%", background: C.coral, borderRadius: 6 }} />
+            </div>
+            <div style={{ marginTop: 14, display: "grid", gridTemplateColumns: "repeat(8, 1fr)", gap: 3 }}>
+              {Array.from({ length: 8 }).map((_, i) => bar("col"+i, 28, "auto"))}
+            </div>
+          </div>
+        );
+        if (kind === "grid") return (
+          <div style={{ padding: 10, display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gridAutoRows: "1fr", gap: 5, height: "100%" }}>
+            {Array.from({ length: 12 }).map((_, i) => (
+              <div key={i} style={{ background: i === 5 ? C.coral : C.rule, borderRadius: 4 }} />
+            ))}
+          </div>
+        );
+        return (
+          <div style={{ padding: 10, display: "flex", flexDirection: "column", gap: 5 }}>
+            {bar(10, "30%")}
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} style={{ display: "flex", gap: 4, alignItems: "center", background: i===0 ? C.coralSoft : "transparent", border: i===0 ? `1px solid ${C.coral}` : `1px solid ${C.rule}`, borderRadius: 6, padding: 5 }}>
+                <div style={{ width: 6, height: 6, borderRadius: 999, background: i===0 ? C.coral : C.rule }} />
+                <div style={{ flex: 1, height: 4, background: C.rule, borderRadius: 2 }} />
+              </div>
+            ))}
+          </div>
+        );
+      };
+
+      /* ─── BEFORE SCREENS ─────────────────────────────────────────────── */
+      const BeforeScreen = ({ kind }) => {
+        if (kind === "list") return (
+          <div style={{ padding: 14, height: "100%", background: "#EDE7DC" }}>
+            <div style={{ display: "flex", gap: 4, marginBottom: 10 }}>
+              {Array.from({ length: 4 }).map((_, i) => <div key={i} style={{ height: 8, flex: 1, background: C.rule, borderRadius: 2 }} />)}
+            </div>
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 4, marginBottom: 4, padding: "5px 4px", background: "rgba(255,255,255,0.4)", borderRadius: 3 }}>
+                {[0,1,2,3].map(j => <div key={j} style={{ height: 6, background: C.rule, borderRadius: 2 }} />)}
+              </div>
+            ))}
+            <div style={{ marginTop: 8, fontFamily: sans, fontSize: 8, color: C.ink3, fontStyle: "italic" }}>(detail screens one tap deeper)</div>
+          </div>
+        );
+        if (kind === "bottomnav") return (
+          <div style={{ padding: 14, height: "100%", background: "#EDE7DC", display: "flex", flexDirection: "column" }}>
+            <div style={{ flex: 1, background: "rgba(255,255,255,0.4)", borderRadius: 4, marginBottom: 6 }} />
+            <div style={{ height: 28, background: C.ink, borderRadius: 4, display: "flex", justifyContent: "space-around", alignItems: "center", padding: "0 8px" }}>
+              {Array.from({ length: 5 }).map((_, i) => <div key={i} style={{ width: 14, height: 14, borderRadius: 999, background: "rgba(255,255,255,0.4)" }} />)}
+            </div>
+            <div style={{ marginTop: 8, fontFamily: sans, fontSize: 8, color: C.ink3, fontStyle: "italic" }}>(mobile-inherited bottom bar)</div>
+          </div>
+        );
+        return (
+          <div style={{ padding: 14, height: "100%", background: "#0F121C", color: "#fff" }}>
+            <div style={{ fontFamily: sans, fontSize: 9, color: "rgba(255,255,255,0.5)", letterSpacing: "0.1em" }}>DARK MODE · ALWAYS</div>
+            <div style={{ marginTop: 10 }}>
+              {Array.from({ length: 5 }).map((_, i) => <div key={i} style={{ height: 18, background: "rgba(255,255,255,0.07)", borderRadius: 4, marginBottom: 4 }} />)}
+            </div>
+            <div style={{ marginTop: 8, fontFamily: sans, fontSize: 8, color: "rgba(255,255,255,0.45)", fontStyle: "italic" }}>(unreadable under direct sun)</div>
+          </div>
+        );
+      };
+
+      /* ─── STICKY NAV ─────────────────────────────────────────────────── */
+      const Nav = () => (
+        <div style={{ position: "sticky", top: 0, zIndex: 10, background: "rgba(242,238,230,0.85)", backdropFilter: "blur(12px)", padding: "20px 48px", borderBottom: `1px solid ${C.rule}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <a href="portfolio-home.html" data-cursor="link" style={{ display: "flex", alignItems: "center", gap: 12, textDecoration: "none", color: C.ink }}>
+            <div style={{ width: 32, height: 32, borderRadius: 8, background: C.ink, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: sans, fontWeight: 700, fontSize: 14 }}>◆</div>
+            <div>
+              <div style={{ fontFamily: sans, fontWeight: 700, fontSize: 14, letterSpacing: "-0.01em" }}>Christina Doolan</div>
+              <div style={{ fontFamily: sans, fontSize: 9, color: C.ink3, letterSpacing: "0.16em", textTransform: "uppercase" }}>Product Designer</div>
+            </div>
+          </a>
+          <div style={{ display: "flex", gap: 32 }}>
+            <a href="portfolio-home.html" data-cursor="link" style={{ fontFamily: sans, fontSize: 14, color: C.ink, textDecoration: "none" }}>Work</a>
+            <a href="portfolio-home.html#about" data-cursor="link" style={{ fontFamily: sans, fontSize: 14, color: C.ink, textDecoration: "none" }}>About</a>
+            <a href="portfolio-home.html#contact" data-cursor="link" style={{ fontFamily: sans, fontSize: 14, color: C.ink, textDecoration: "none" }}>Contact</a>
+          </div>
+          <a href="https://www.linkedin.com/in/christina-doolan" target="_blank" rel="noopener noreferrer" data-cursor="link" style={{ fontFamily: serif, fontStyle: "italic", fontSize: 16, fontWeight: 700, color: C.ink, textDecoration: "none" }}>in</a>
+        </div>
+      );
+
+      /* ─── HERO ───────────────────────────────────────────────────────── */
+      const Hero = ({ containerRef }) => (
+        <section style={{ position: "relative", padding: "60px 64px 100px", minHeight: 920, overflow: "hidden" }}>
+          <div style={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
+            <OrbV2 containerRef={containerRef} themeColor="#FF5C2A" scrollProgress={0} />
+          </div>
+          <div style={{ position: "relative", zIndex: 2, textAlign: "center", paddingTop: 80 }}>
+            <span style={{ display: "inline-block", padding: "8px 18px", border: `1px solid ${C.ink}`, borderRadius: 999, fontFamily: sans, fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase", color: C.ink, marginBottom: 36 }}>
+              iPad · Navigation & Core Flow
+            </span>
+            <h1 style={{ fontFamily: sans, fontWeight: 700, fontSize: "clamp(56px, 6.4vw, 92px)", lineHeight: 0.98, letterSpacing: "-0.04em", color: C.ink, maxWidth: 1040, margin: "0 auto 20px", textWrap: "balance" }}>
+              The iPad app that has to work —{" "}
+              <span style={{ fontFamily: serif, fontStyle: "italic", fontWeight: 400, color: C.coral }}>
+                every gate, every shift, every morning.
+              </span>
+            </h1>
+            
+          </div>
+          {/* Hero iPads */}
+          <div style={{ position: "relative", zIndex: 2, marginTop: 80, height: 480, display: "flex", gap: 40, justifyContent: "center", alignItems: "center", perspective: 1400 }}>
+            <div style={{ width: 520, transform: "rotate(-4deg) translateY(20px)" }}>
+              <IPad><RampOpsScreen variant="task" light /></IPad>
+            </div>
+            <div style={{ width: 520, transform: "rotate(3deg) translateY(-20px)" }}>
+              <IPad><RampOpsScreen variant="nav" light /></IPad>
+            </div>
+          </div>
+        </section>
+      );
+
+      /* ─── PROJECT OVERVIEW ───────────────────────────────────────────── */
+      const Overview = () => (
+        <section style={{ padding: "120px 64px", maxWidth: 1280, margin: "0 auto" }}>
+          <TwoCol
+            left={<SectionTitle>Project <span style={{ fontFamily: serif, fontStyle: "italic", fontWeight: 400 }}>Overview</span></SectionTitle>}
+            right={<>
+              <Body size={19}>Moonwave runs the ground ops layer that keeps planes moving — fueling, baggage, towing, and turnarounds, all coordinated shift by shift. The tools ramp agents relied on were a patchwork of paper forms, radios, and spreadsheets held together by tribal knowledge.</Body>
+              <Body size={19}>I designed the iPad app for Japan Airlines based on the existing mobile app — rethinking how ramp agents navigate complex, time-critical tasks from the moment their shift starts to the final gate clearance.</Body>
+            </>}
+          />
+          <div style={{ height: 80 }} />
+          <Rule />
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 40, padding: "40px 0" }}>
+            {[["Client","Japan Airlines (JAL)"],["My Role","Product Designer · Design Lead"],["Platform","iPadOS landscape · iOS · Android"],["Tools","Figma · Xcode · Claude Code"]].map(([k, v]) => (
+              <div key={k}><Label>{k}</Label><div style={{ fontFamily: sans, fontSize: 17, color: C.ink, lineHeight: 1.5 }}>{v}</div></div>
+            ))}
+          </div>
+          <Rule />
+        </section>
+      );
+
+      /* ─── CHALLENGE ──────────────────────────────────────────────────── */
+      const Challenge = () => (
+        <section style={{ padding: "120px 64px", maxWidth: 1280, margin: "0 auto" }}>
+          <TwoCol
+            left={<><Label>The Challenge</Label><SectionTitle>The <span style={{ fontFamily: serif, fontStyle: "italic", fontWeight: 400 }}>problem</span></SectionTitle></>}
+            right={<>
+              <Body size={19}>Ramp agents work in one of the least digitized corners of aviation — coordinating fueling, baggage, and turnarounds across radios, paper checklists, and gut instinct. A single missed handoff can ripple across an entire airport's morning.</Body>
+              <Body size={19}>The iPad app had to hold up in conditions most software never accounts for: bright tarmacs and dim hangars, gloved hands, batteries drained well before the shift ends, and Japan's full range of weather — humid summers, freezing winters, and everything in between.</Body>
+            </>}
+          />
+        </section>
+      );
+
+      /* ─── DESIGN PROCESS ─────────────────────────────────────────────── */
+      const Process = () => {
+        const steps = [
+          { name: "Field shadow", color: "#3FA45A" },
+          { name: "Synthesize",   color: "#3F7BA4" },
+          { name: "Reframe",      color: "#8A5BC4" },
+          { name: "Prototype",    color: "#D9A03B" },
+          { name: "Field test",   color: "#C4523F" },
+        ];
+        return (
+          <section style={{ padding: "60px 64px 120px", maxWidth: 1280, margin: "0 auto" }}>
+            <div style={{ background: C.card, borderRadius: 18, padding: "60px 48px", boxShadow: "0 2px 12px rgba(0,0,0,0.06)", position: "relative" }}>
+              <SectionTitle size={42}>My design <span style={{ fontFamily: serif, fontStyle: "italic", fontWeight: 400 }}>process</span></SectionTitle>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 60, position: "relative" }}>
+                {steps.map((s, i) => (
+                  <Fragment key={s.name}>
+                    <div style={{ textAlign: "center", flex: "0 0 auto" }}>
+                      <div style={{ width: 110, height: 110, borderRadius: "50%", background: s.color, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontFamily: sans, fontWeight: 700, fontSize: 13, letterSpacing: "0.06em", textTransform: "uppercase" }}>0{i + 1}</div>
+                      <div style={{ fontFamily: serif, fontStyle: "italic", fontSize: 22, color: s.color, marginTop: 14 }}>{s.name}</div>
+                    </div>
+                    {i < steps.length - 1 && <div style={{ flex: 1, borderTop: `2px dashed ${C.rule}`, margin: "0 -10px", position: "relative", top: -22 }} />}
+                  </Fragment>
+                ))}
+                <svg viewBox="0 0 1000 120" style={{ position: "absolute", top: -40, left: 0, right: 0, width: "100%", height: 80, pointerEvents: "none" }}>
+                  <path d="M 480 80 Q 600 -10, 720 80" stroke={C.ink3} strokeWidth="1.5" strokeDasharray="4 4" fill="none" />
+                  <path d="M 680 80 Q 800 -10, 920 80" stroke={C.ink3} strokeWidth="1.5" strokeDasharray="4 4" fill="none" />
+                  <text x="600" y="14" fill={C.ink3} fontFamily="Inter Tight" fontSize="11" letterSpacing="0.18em" textAnchor="middle">ITERATE</text>
+                  <text x="800" y="14" fill={C.ink3} fontFamily="Inter Tight" fontSize="11" letterSpacing="0.18em" textAnchor="middle">ITERATE</text>
+                </svg>
+              </div>
+            </div>
+          </section>
+        );
+      };
+
+      /* ─── RESEARCH ───────────────────────────────────────────────────── */
+      const Research = () => (
+        <section style={{ padding: "60px 64px 120px", maxWidth: 1280, margin: "0 auto" }}>
+          <TwoCol
+            left={<><Label>Empathize</Label><SectionTitle>Research</SectionTitle></>}
+            right={<Body size={19}>Research came directly from the field. I ran design reviews with JAL's ground operations team across multiple field tests, collecting structured feedback through shared request logs, post-test surveys, and async design Q&A. JAL's ops leads documented issues in real time — from agents turning off their iPads mid-shift to save battery, to crews showing up at the wrong plane because a task update didn't register.</Body>}
+          />
+
+          {/* Methods */}
+          <div style={{ marginTop: 80 }}>
+            <Label color={C.coral}>Research methods</Label>
+            <div style={{ background: C.card, borderRadius: 18, marginTop: 24, boxShadow: "0 2px 12px rgba(0,0,0,0.06)", display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr" }}>
+              {[
+                ["Field tests",       "Multiple rounds at JAL ground ops",     "10 ramp agents observed across shifts"],
+                ["Request logs",      "Real-time issue capture by ops leads",   "Tagged by severity & screen"],
+                ["Post-test surveys", "Structured after each release",          "EN + JP, parity scoring"],
+                ["Async design Q&A",  "Confluence threads with field crews",    "Open through the entire PoC"],
+              ].map(([title, sub, detail], i) => (
+                <div key={title} style={{ padding: 32, borderRight: i < 3 ? `1px solid ${C.rule}` : "none" }}>
+                  <div style={{ fontFamily: sans, fontWeight: 700, fontSize: 13, color: C.ink, letterSpacing: "0.04em", textTransform: "uppercase" }}>{title}</div>
+                  <div style={{ fontFamily: sans, fontSize: 14, color: C.ink2, marginTop: 12, lineHeight: 1.55 }}>{sub}</div>
+                  <div style={{ fontFamily: sans, fontSize: 12, color: C.ink3, marginTop: 14, paddingTop: 14, borderTop: `1px solid ${C.rule}`, lineHeight: 1.5 }}>{detail}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Key Questions */}
+          <div style={{ marginTop: 100 }}>
+            <SectionTitle size={42}>Key <span style={{ fontFamily: serif, fontStyle: "italic", fontWeight: 400 }}>questions</span></SectionTitle>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 20, marginTop: 40 }}>
+              {[
+                "Where in the shift are agents losing time — to the tool, or despite it?",
+                "What does an acknowledgement actually mean when you're wearing gloves and a plane is boarding?",
+                "Which information do agents need without tapping — and what can wait one screen deeper?",
+              ].map((q) => (
+                <div key={q} style={{ background: C.card, borderRadius: 14, padding: 32, boxShadow: "0 2px 12px rgba(0,0,0,0.06)", fontFamily: serif, fontStyle: "italic", fontSize: 22, lineHeight: 1.35, color: C.ink }}>"{q}"</div>
+              ))}
+            </div>
+          </div>
+
+          {/* What we found */}
+          <div style={{ marginTop: 100 }}>
+            <SectionTitle size={42}>What we <span style={{ fontFamily: serif, fontStyle: "italic", fontWeight: 400 }}>found</span></SectionTitle>
+            {[
+              ["Battery is a trust problem.",            "Agents were turning iPads off mid-shift to conserve battery. If the device might die, you don't build your workflow around it. Every design decision had to earn its power draw."],
+              ["Missed updates cause real consequences.", "A crew member showed up at the wrong aircraft because a task change didn't surface clearly enough. Agents weren't ignoring the app — they were acting on stale information it had given them."],
+              ["Notification volume was killing signal.", "Flight arrival pings, tail number changes, reassignments — crews flagged they were drowning in alerts. The ones that mattered weren't landing."],
+              ["Agents wanted to see their whole day.",   "All 10 interviewed agents asked to see unconfirmed upcoming tasks — not because plans don't change, but because they prep equipment, plan breaks, and mentally sequence their shift hours in advance."],
+            ].map(([title, desc], i) => (
+              <div key={i} style={{ display: "grid", gridTemplateColumns: "35fr 60fr", gap: 80, padding: "32px 0", borderTop: `1px solid ${C.rule}` }}>
+                <div style={{ background: C.card, borderRadius: 12, padding: 24, boxShadow: "0 2px 12px rgba(0,0,0,0.06)", fontFamily: serif, fontStyle: "italic", fontSize: 26, color: C.ink, lineHeight: 1.2, alignSelf: "start" }}>{title}</div>
+                <Body size={17}>{desc}</Body>
+              </div>
+            ))}
+          </div>
+
+          {/* Field quotes */}
+          <div style={{ marginTop: 100 }}>
+            <Label color={C.coral}>From the field</Label>
+            <SectionTitle size={42}>The agents, in <span style={{ fontFamily: serif, fontStyle: "italic", fontWeight: 400 }}>their own words</span></SectionTitle>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, marginTop: 40 }}>
+              {[
+                "The staff often use the iPad under extremely bright condition under the sun + while using cotton made gloves.",
+                "In less than 3 hours, the battery level dropped about 70% so some people turned off the iPad to save the battery.",
+                "We are receiving several comments saying that they are receiving too many notifications.",
+                "All 10 users that we interviewed would like to see all of their personal assignments although there is an extremely high chance that it may change.",
+                "If the change is to a confirmed task, they would want the users to acknowledge that they are un-assigned from it.",
+                "Some of the wordings are too small, especially people with presbyopia.",
+              ].map((q) => (
+                <div key={q} style={{ padding: "8px 0" }}>
+                  <div style={{ fontFamily: serif, fontStyle: "italic", fontSize: 48, color: C.coral, lineHeight: 0.5, marginBottom: 14 }}>"</div>
+                  <div style={{ fontFamily: serif, fontStyle: "italic", fontSize: 19, color: C.ink, lineHeight: 1.4 }}>{q}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      );
+
+      /* ─── PERSONAS ───────────────────────────────────────────────────── */
+      const Personas = () => {
+        const personas = [
+          { name: "The Ramp Agent",          meta: "Front-line · gloves on · screen down",    bg: C.coralSoft, quote: "By the time it registers, I'm already moving in the wrong direction.",                                                          bgText: "First shift starts before sunrise. Tasks come fast — fueling, baggage, towing — and the iPad gets checked in one-second glances between them. Screen brightness turned down to save battery. Notifications piling up, most of them irrelevant.", goals: ["See the next task without unlocking","Acknowledge with a gloved tap","Trust that on-screen matches the radio"], needs: ["Glanceable times on the card itself","Sunlight-legible light mode","Battery-conscious rendering"],     challenges: ["Cold/wet hands, cotton gloves","Dimmed brightness all shift","Reassignment buried in pings"] },
+          { name: "The Ground Coordinator",  meta: "Coordinates a flight's full crew",        bg: "#E8E4D6",   quote: "I need to know who's confirmed, who hasn't acknowledged, and who's missing — without radioing every one of them.",                 bgText: "Responsible for knowing what every crew member on their flight is doing, without being able to watch all of them. They need crew assignment visibility at a glance — who's confirmed, who hasn't acknowledged, who's missing.",               goals: ["See whole-crew acknowledgement state","Resolve gaps before pushback","Cut radio chatter"],           needs: ["Per-flight crew roster on one screen","Clear unconfirmed vs unassigned states","One-tap reassign"], challenges: ["Filling the gap with radio + gut","Information loss between systems","Mixed-language crews"] },
+          { name: "The Lead (LM)",           meta: "Catches what falls through",              bg: "#E6E7DC",   quote: "It can't contradict what I just told my crew over the radio.",                                                                 bgText: "The person who catches what falls through. When a task goes unassigned, when crew numbers don't meet airline requirements, when someone shows up at the wrong stand — it lands on the LM. They need to see the full picture of a turnaround fast.", goals: ["Full turnaround visibility in one view","Quick adjustments that propagate","Stay in sync with the radio"], needs: ["Aircraft-level overview","Acknowledged change history","Crew requirements flagged live"],        challenges: ["Accountability for blind spots","Decisions in seconds","No room for stale data"] },
+        ];
+        return (
+          <section style={{ padding: "60px 64px 120px", maxWidth: 1280, margin: "0 auto" }}>
+            <SectionTitle size={48}>User <span style={{ fontFamily: serif, fontStyle: "italic", fontWeight: 400 }}>personas</span></SectionTitle>
+            <Body size={19}>Three operational archetypes shape every screen — each with different time horizons, accountability, and tolerance for friction.</Body>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 24, marginTop: 32 }}>
+              {personas.map((p) => (
+                <div key={p.name} style={{ background: C.card, borderRadius: 18, overflow: "hidden", boxShadow: "0 2px 12px rgba(0,0,0,0.06)", display: "flex", flexDirection: "column" }}>
+                  <div style={{ background: p.bg, padding: 24, position: "relative", minHeight: 200 }}>
+                    <div style={{ fontFamily: serif, fontStyle: "italic", fontSize: 14, color: C.ink2, lineHeight: 1.4, marginBottom: 24 }}>
+                      <span style={{ color: C.coral, fontSize: 32, lineHeight: 0, verticalAlign: "-10px", marginRight: 4 }}>"</span>{p.quote}
+                    </div>
+                    <div style={{ position: "absolute", left: 24, bottom: 24, right: 24 }}>
+                      <div style={{ fontFamily: sans, fontWeight: 700, fontSize: 24, color: C.ink, letterSpacing: "-0.02em" }}>{p.name}</div>
+                      <div style={{ fontFamily: sans, fontSize: 11, color: C.ink3, marginTop: 4, letterSpacing: "0.04em" }}>{p.meta}</div>
+                    </div>
+                  </div>
+                  <div style={{ padding: 24 }}>
+                    {[["Background",p.bgText],["Goals",p.goals],["Needs",p.needs],["Challenges",p.challenges]].map(([k, v]) => (
+                      <div key={k} style={{ marginBottom: 18 }}>
+                        <Label color={C.coral}>{k}</Label>
+                        {Array.isArray(v)
+                          ? <ul style={{ margin: 0, paddingLeft: 18, fontFamily: sans, fontSize: 13, lineHeight: 1.6, color: C.ink2 }}>{v.map(it => <li key={it}>{it}</li>)}</ul>
+                          : <div style={{ fontFamily: sans, fontSize: 13, color: C.ink2, lineHeight: 1.55 }}>{v}</div>
+                        }
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        );
+      };
+
+      /* ─── POV / HMW ──────────────────────────────────────────────────── */
+      const POVHMW = () => (
+        <section style={{ padding: "60px 64px 120px", maxWidth: 1280, margin: "0 auto" }}>
+          <TwoCol
+            left={<><Label>POV</Label><SectionTitle size={48}>Points of <span style={{ fontFamily: serif, fontStyle: "italic", fontWeight: 400 }}>view</span></SectionTitle></>}
+            right={
+              <ol style={{ margin: 0, paddingLeft: 0, listStyle: "none" }}>
+                {["Ramp agents glancing at a dimmed screen with gloved hands need critical task info on the card itself — without tapping into a detail screen they may not have time to open.",
+                  "Ground coordinators routing crew across a flight need acknowledgement state at a glance — confirmed, unconfirmed, missing — so radio calls become the exception, not the workflow.",
+                  "Leads accountable for the full turnaround need a single, trustworthy source of truth that matches what's being said on the radio in real time.",
+                ].map((p, i) => (
+                  <li key={i} style={{ display: "grid", gridTemplateColumns: "32px 1fr", gap: 16, padding: "20px 0", borderTop: i===0 ? "none" : `1px solid ${C.rule}` }}>
+                    <span style={{ fontFamily: sans, fontSize: 14, color: C.coral, fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>0{i+1}</span>
+                    <span style={{ fontFamily: sans, fontSize: 17, color: C.ink, lineHeight: 1.55 }}>{p}</span>
+                  </li>
+                ))}
+              </ol>
+            }
+          />
+          <div style={{ height: 80 }} />
+          <TwoCol
+            left={<><Label>HMW</Label><SectionTitle size={48}>How <span style={{ fontFamily: serif, fontStyle: "italic", fontWeight: 400 }}>might</span> we</SectionTitle></>}
+            right={
+              <ol style={{ margin: 0, paddingLeft: 0, listStyle: "none" }}>
+                {["How might we surface times, assignments, and status on the task card itself so agents don't need to drill in during time-critical moments?",
+                  "How might we redesign the nav for iPad landscape so coordinators and leads keep persistent access to flights, crew, and tasks?",
+                  "How might we cut notification noise so the alerts that actually matter — a reassignment, a gate change — break through?",
+                  "How might we treat light mode as a first-class theme, designed for sunlight and dimmed brightness from day one?",
+                ].map((p, i) => (
+                  <li key={i} style={{ display: "grid", gridTemplateColumns: "32px 1fr", gap: 16, padding: "20px 0", borderTop: i===0 ? "none" : `1px solid ${C.rule}` }}>
+                    <span style={{ fontFamily: sans, fontSize: 14, color: C.coral, fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>0{i+1}</span>
+                    <span style={{ fontFamily: sans, fontSize: 17, color: C.ink, lineHeight: 1.55 }}>{p}</span>
+                  </li>
+                ))}
+              </ol>
+            }
+          />
+        </section>
+      );
+
+      /* ─── PROJECT GOALS (VENN) ───────────────────────────────────────── */
+      const Goals = () => (
+        <section style={{ padding: "60px 64px 120px", maxWidth: 1280, margin: "0 auto" }}>
+          <TwoCol
+            left={<SectionTitle size={48}>Project <span style={{ fontFamily: serif, fontStyle: "italic", fontWeight: 400 }}>goals</span></SectionTitle>}
+            right={<Body size={19}>Before mapping solutions, I aligned business objectives, user needs, and technical constraints — and made the trade-offs visible to every stakeholder.</Body>}
+          />
+          <div style={{ marginTop: 60, position: "relative", height: 560, background: C.card, borderRadius: 18, boxShadow: "0 2px 12px rgba(0,0,0,0.06)" }}>
+            {[
+              { name: "Business · Moonwave", x: "20%", y: "12%", color: "#9CCBA0", items: ["Win JAL PoC, convert to contract","Prove platform at airport scale","Reduce manual controller intervention","Build replicable ground-ops product"] },
+              { name: "User",                x: "55%", y: "12%", color: "#C7A8E8", items: ["Full shift plan without tapping in","Trust screen matches radio","Ack & act in one motion","Read in sunlight, with gloves"] },
+              { name: "Technical",           x: "37%", y: "44%", color: "#FFC9A8", items: ["Battery-conscious rendering","Glove-sized hit targets","Light mode for tarmac","Notification logic that earns attention"] },
+            ].map((circle) => (
+              <div key={circle.name} style={{ position: "absolute", left: circle.x, top: circle.y, width: 380, height: 380, borderRadius: "50%", background: circle.color, opacity: 0.72, mixBlendMode: "multiply", padding: 50, boxSizing: "border-box" }}>
+                <div style={{ fontFamily: sans, fontWeight: 700, fontSize: 17, color: C.ink, marginBottom: 12, marginTop: 24, textAlign: "center" }}>{circle.name}</div>
+                <ul style={{ margin: 0, paddingLeft: 16, fontFamily: sans, fontSize: 12, color: C.ink, lineHeight: 1.6 }}>
+                  {circle.items.map(it => <li key={it}>{it}</li>)}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </section>
+      );
+
+      /* ─── USER FLOW ──────────────────────────────────────────────────── */
+      const Flow = () => (
+        <section style={{ padding: "60px 64px 120px", maxWidth: 1280, margin: "0 auto" }}>
+          <TwoCol
+            left={<SectionTitle size={48}>Turnaround <span style={{ fontFamily: serif, fontStyle: "italic", fontWeight: 400 }}>flow</span></SectionTitle>}
+            right={<Body size={19}>I mapped the turnaround — the choreography from arrival to pushback — across all three roles, surfacing the handoffs where information loss happened most.</Body>}
+          />
+          <div style={{ marginTop: 60, background: C.card, borderRadius: 18, padding: 40, boxShadow: "0 2px 12px rgba(0,0,0,0.06)", overflowX: "auto" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 14, minWidth: 1100 }}>
+              {[
+                { t: "Arrival ping",   s: "rect",    c: "#9CCBA0" },
+                { t: "Crew assigned?", s: "diamond", c: "#FFC9A8" },
+                { t: "Acknowledge",    s: "rect",    c: C.coralSoft },
+                { t: "Walk-around",    s: "rect",    c: C.coralSoft },
+                { t: "Refuel ready?",  s: "diamond", c: "#FFC9A8" },
+                { t: "Begin fuel",     s: "rect",    c: C.coralSoft },
+                { t: "Bag offload",    s: "rect",    c: C.coralSoft },
+                { t: "Cleared",        s: "circle",  c: "#9CCBA0" },
+              ].map((n, i, arr) => (
+                <Fragment key={i}>
+                  <div style={{ width: n.s==="diamond"?100:110, height: n.s==="diamond"?100:56, background: n.c, borderRadius: n.s==="circle"?"50%":8, transform: n.s==="diamond"?"rotate(45deg)":"none", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: sans, fontSize: 11, fontWeight: 600, color: C.ink, textAlign: "center", padding: 8, flexShrink: 0 }}>
+                    <span style={{ transform: n.s==="diamond"?"rotate(-45deg)":"none" }}>{n.t}</span>
+                  </div>
+                  {i < arr.length - 1 && <div style={{ color: C.ink3, fontSize: 18 }}>→</div>}
+                </Fragment>
+              ))}
+            </div>
+          </div>
+        </section>
+      );
+
+      /* ─── WIREFRAMES ─────────────────────────────────────────────────── */
+      const Wireframes = () => (
+        <section style={{ padding: "60px 64px 120px", maxWidth: 1280, margin: "0 auto" }}>
+          <SectionTitle size={48}>Low–Mid fidelity <span style={{ fontFamily: serif, fontStyle: "italic", fontWeight: 400 }}>wireframes</span></SectionTitle>
+          <div style={{ maxWidth: 720, marginTop: 16, marginBottom: 48 }}>
+            <Body size={17}>Six landscape wireframes explored different navigation models for the iPad — split-view shift dashboards, persistent left nav, top-tab nav, and a task-card-first layout. We tested each with JAL ramp leads before committing to the dynamic top-nav direction.</Body>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 24 }}>
+            {[
+              { label: "Frame 01 · Split shift view",        body: "left"      },
+              { label: "Frame 02 · Top nav · task-card first", body: "topcards" },
+              { label: "Frame 03 · Persistent crew sidebar", body: "rightcrew" },
+              { label: "Frame 04 · Timeline-first",          body: "timeline"  },
+              { label: "Frame 05 · Bay-grid overview",       body: "grid"      },
+              { label: "Frame 06 · Notification triage",     body: "alerts"    },
+            ].map((w, i) => (
+              <IPad key={i} label={w.label} screenBg="#F5F2EB"><WireBody kind={w.body} /></IPad>
+            ))}
+          </div>
+        </section>
+      );
+
+      /* ─── BRANDING / DESIGN SYSTEM ───────────────────────────────────── */
+      const Branding = () => (
+        <section style={{ padding: "60px 64px 120px", maxWidth: 1280, margin: "0 auto" }}>
+          <TwoCol
+            left={<SectionTitle size={48}>Branding & <span style={{ fontFamily: serif, fontStyle: "italic", fontWeight: 400 }}>system</span></SectionTitle>}
+            right={<>
+              <Body size={17}><strong style={{ color: C.ink, fontWeight: 600 }}>Color:</strong> A two-layer semantic token system — surface tokens map to brand hues, intent tokens (success, alert, escalation) inherit from them. For the iPad, this meant light mode wasn't a bolt-on. It was a first-class theme built for direct sunlight, low brightness, and gloved-hand legibility from day one.</Body>
+              <Body size={17}><strong style={{ color: C.ink, fontWeight: 600 }}>Typography:</strong> Inter for all UI text, paired with Noto Sans for Japanese — chosen for its clean Inter compatibility and full kanji coverage. Both weighted for legibility at small sizes on a dimmed screen.</Body>
+              <Body size={17}><strong style={{ color: C.ink, fontWeight: 600 }}>Components:</strong> Built on a shared token graph and documented for engineering handoff — every component wired to the same semantic layer so the iPad and mobile apps share a single source of truth.</Body>
+            </>}
+          />
+          <div style={{ marginTop: 60, background: C.card, borderRadius: 18, padding: 40, boxShadow: "0 2px 12px rgba(0,0,0,0.06)", display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 40 }}>
+            <div>
+              <Label>Theme tokens</Label>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 14 }}>
+                <div style={{ background: "#F8F6F1", border: `1px solid ${C.rule}`, borderRadius: 10, padding: 12 }}>
+                  <div style={{ fontFamily: sans, fontSize: 10, color: C.ink3, letterSpacing: "0.12em", textTransform: "uppercase" }}>Light · tarmac</div>
+                  <div style={{ display: "flex", gap: 4, marginTop: 8 }}>
+                    {["#F8F6F1","#FFFFFF","#0A0E1A",C.coral,"#2E7B4E"].map(c => (
+                      <div key={c} style={{ width: 24, height: 24, borderRadius: 5, background: c, border: `1px solid ${C.rule}` }} />
+                    ))}
+                  </div>
+                </div>
+                <div style={{ background: "#0F121C", borderRadius: 10, padding: 12 }}>
+                  <div style={{ fontFamily: sans, fontSize: 10, color: "rgba(255,255,255,0.6)", letterSpacing: "0.12em", textTransform: "uppercase" }}>Dark · hangar</div>
+                  <div style={{ display: "flex", gap: 4, marginTop: 8 }}>
+                    {["#0F121C","#181C28","#F5F3EE",C.coral,"#3FA45A"].map(c => (
+                      <div key={c} style={{ width: 24, height: 24, borderRadius: 5, background: c, border: "1px solid rgba(255,255,255,0.1)" }} />
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <div style={{ marginTop: 24 }}>
+                <Label>Components</Label>
+                <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 12 }}>
+                  <button style={{ background: C.coral, color: "#fff", border: "none", padding: "12px 18px", borderRadius: 10, fontFamily: sans, fontSize: 13, fontWeight: 700, alignSelf: "start", letterSpacing: "0.04em", cursor: "none" }}>Acknowledge task</button>
+                  <button style={{ background: "transparent", color: C.ink, border: `1.5px solid ${C.ink}`, padding: "12px 18px", borderRadius: 10, fontFamily: sans, fontSize: 13, fontWeight: 700, alignSelf: "start", cursor: "none" }}>Defer</button>
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <span style={{ padding: "5px 12px", borderRadius: 999, background: C.coralSoft, color: C.coral, fontSize: 11, fontWeight: 700 }}>OFFBLOCK</span>
+                    <span style={{ padding: "5px 12px", borderRadius: 999, background: "#E0F0E5", color: "#2E7B4E", fontSize: 11, fontWeight: 700 }}>CONFIRMED</span>
+                    <span style={{ padding: "5px 12px", borderRadius: 999, background: "rgba(10,14,26,0.06)", color: C.ink2, fontSize: 11, fontWeight: 700 }}>UNCONFIRMED</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <Label>Intent tokens</Label>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 14 }}>
+                {[["#FF5C2A","Escalation"],["#2E7B4E","Confirmed"],["#D9A03B","Caution"],["#3F7BA4","Information"],["#0A0E1A","Primary surface"],["#F8F6F1","Tarmac base"]].map(([hex, name]) => (
+                  <div key={hex}>
+                    <div style={{ height: 56, borderRadius: 8, background: hex, border: `1px solid ${C.rule}` }} />
+                    <div style={{ fontFamily: sans, fontSize: 11, color: C.ink, marginTop: 6, fontWeight: 600 }}>{name}</div>
+                    <div style={{ fontFamily: sans, fontSize: 10, color: C.ink3, fontVariantNumeric: "tabular-nums" }}>{hex}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <Label>Typography</Label>
+              <div style={{ fontFamily: sans, fontSize: 36, fontWeight: 700, color: C.ink, letterSpacing: "-0.02em", marginTop: 8 }}>Inter</div>
+              <div style={{ fontFamily: sans, fontSize: 11, color: C.ink3, marginBottom: 6 }}>Display · UI · Numerals — weighted for dim, sunlit screens</div>
+              <div style={{ fontFamily: '"Noto Sans JP", "Noto Sans", sans-serif', fontSize: 32, fontWeight: 700, color: C.ink, letterSpacing: "-0.01em", marginTop: 14 }}>地上業務</div>
+              <div style={{ fontFamily: sans, fontSize: 11, color: C.ink3 }}>Noto Sans JP — full kanji coverage, Inter-compatible metrics</div>
+              <div style={{ marginTop: 24, paddingTop: 24, borderTop: `1px solid ${C.rule}` }}>
+                <Label>Type scale (anti-presbyopia)</Label>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6, fontFamily: sans, color: C.ink }}>
+                  <div style={{ fontSize: 22, fontWeight: 700 }}>22 · Task title</div>
+                  <div style={{ fontSize: 17, fontWeight: 600 }}>17 · Body</div>
+                  <div style={{ fontSize: 14 }}>14 · Meta (min)</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      );
+
+      /* ─── HIGH FIDELITY ──────────────────────────────────────────────── */
+      const HighFi = () => (
+        <section style={{ padding: "60px 64px 120px", maxWidth: 1280, margin: "0 auto" }}>
+          <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", marginBottom: 48 }}>
+            <div>
+              <SectionTitle size={48}>High fidelity <span style={{ fontFamily: serif, fontStyle: "italic", fontWeight: 400 }}>screens</span></SectionTitle>
+              <div style={{ maxWidth: 640, marginTop: 16 }}>
+                <Body size={17}>After branding was locked, I designed the iPad app end-to-end — landscape-first, light mode by default, every primary action sized for a gloved tap. Below: the four pivotal screens.</Body>
+              </div>
+            </div>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 28 }}>
+            <IPad label="Shift view · light mode"       screenBg="#F8F6F1"><RampOpsScreen variant="task" light /></IPad>
+            <IPad label="Dynamic nav · flights"          screenBg="#F8F6F1"><RampOpsScreen variant="nav"  light /></IPad>
+            <IPad label="Shift view · dim/hangar mode"   screenBg="#0F121C"><RampOpsScreen variant="task" light={false} /></IPad>
+            <IPad label="Dynamic nav · dim/hangar mode"  screenBg="#0F121C"><RampOpsScreen variant="nav"  light={false} /></IPad>
+          </div>
+        </section>
+      );
+
+      /* ─── BEFORE & AFTER ─────────────────────────────────────────────── */
+      const BeforeAfter = () => {
+        const items = [
+          { title: "Task page redesign",  desc: "The original task view required agents to tap into detail screens to see critical information — times, assignments, status. The redesign surfaces required info directly on the task card, reducing the number of taps needed during time-critical moments.", before: "list",      after: "task" },
+          { title: "Dynamic nav bar",     desc: "The navigation bar was redesigned specifically for iPad landscape. Rather than a mobile-inherited bottom bar, the new nav adapts to the wider viewport — giving coordinators and leads persistent access to flight, crew, and task views without losing screen real estate.", before: "bottomnav", after: "nav"  },
+          { title: "Light mode",          desc: "Light mode was built as a first-class theme, not an afterthought. Designed for direct sunlight, low brightness settings, and gloved-hand use — with contrast ratios and touch targets validated against tarmac conditions.", before: "darkonly",  after: "task" },
+        ];
+        return (
+          <section style={{ padding: "60px 64px 120px", maxWidth: 1280, margin: "0 auto" }}>
+            <SectionTitle size={48}>Before & <span style={{ fontFamily: serif, fontStyle: "italic", fontWeight: 400 }}>after</span></SectionTitle>
+            {items.map((it, i) => (
+              <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 32, alignItems: "center", padding: "48px 0", borderTop: `1px solid ${C.rule}` }}>
+                <div>
+                  <Label>0{i+1}</Label>
+                  <div style={{ fontFamily: serif, fontStyle: "italic", fontSize: 30, color: C.ink, marginBottom: 14, lineHeight: 1.15 }}>{it.title}</div>
+                  <Body size={15}>{it.desc}</Body>
+                </div>
+                <div>
+                  <div style={{ fontFamily: sans, fontSize: 11, color: C.ink3, letterSpacing: "0.16em", textTransform: "uppercase", marginBottom: 8 }}>Before</div>
+                  <IPad screenBg={it.before === "darkonly" ? "#0F121C" : "#EDE7DC"}><BeforeScreen kind={it.before} /></IPad>
+                </div>
+                <div>
+                  <div style={{ fontFamily: sans, fontSize: 11, color: C.coral, letterSpacing: "0.16em", textTransform: "uppercase", marginBottom: 8 }}>After</div>
+                  <IPad screenBg="#F8F6F1"><RampOpsScreen variant={it.after} light /></IPad>
+                </div>
+              </div>
+            ))}
+          </section>
+        );
+      };
+
+      /* ─── RESULTS ────────────────────────────────────────────────────── */
+      const Results = () => (
+        <section style={{ padding: "60px 64px 120px", maxWidth: 1280, margin: "0 auto" }}>
+          <SectionTitle size={48}>Results</SectionTitle>
+          <div style={{ display: "grid", gridTemplateColumns: "auto auto auto 1fr", gap: 32, alignItems: "center", marginTop: 60 }}>
+            {[["$3.7M","Projected operational savings"],["6%","Headcount allocation reduction"],["Q4 '25","Shipped to JAL ops at HND"]].map(([num, lbl]) => (
+              <div key={lbl} style={{ width: 200, height: 200, borderRadius: "50%", background: C.coral, color: "#fff", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center" }}>
+                <div style={{ fontFamily: sans, fontWeight: 700, fontSize: 40, letterSpacing: "-0.03em", lineHeight: 1 }}>{num}</div>
+                <div style={{ fontFamily: sans, fontSize: 11, marginTop: 8, letterSpacing: "0.1em", textTransform: "uppercase", maxWidth: 150, lineHeight: 1.3 }}>{lbl}</div>
+              </div>
+            ))}
+            <div style={{ maxWidth: 360 }}>
+              <Body size={17}>The designed iPad app shipped to JAL ground ops at Tokyo Haneda (HND) in Q4 2025. The response was strong enough that JAL vouched for Moonwave to key investors and extended the PoC to Okinawa — moving toward broader implementation across a larger network, working directly with JAL IT to scale.</Body>
+            </div>
+          </div>
+
+          <div style={{ marginTop: 80, padding: "40px 0", borderTop: `1px solid ${C.rule}`, borderBottom: `1px solid ${C.rule}` }}>
+            <div style={{ fontFamily: serif, fontStyle: "italic", fontSize: 32, color: C.ink, lineHeight: 1.3, maxWidth: 900 }}>
+              The real result was trust: <span style={{ color: C.coral }}>an airline putting its name behind the platform.</span> Haneda was the foundation — the goal from here is more airports, more carriers, and a platform that keeps getting leaner as it scales.
+            </div>
+          </div>
+        </section>
+      );
+
+      /* ─── FINAL MOCKUP ───────────────────────────────────────────────── */
+      const FinalMockup = () => (
+        <section style={{ padding: "100px 64px 120px", maxWidth: 1280, margin: "0 auto", textAlign: "center" }}>
+          <div style={{ width: 880, margin: "0 auto", transform: "rotate(-1.5deg)" }}>
+            <IPad screenBg="#F8F6F1"><RampOpsScreen variant="task" light /></IPad>
+          </div>
+          <div style={{ fontFamily: sans, fontSize: 11, color: C.ink3, letterSpacing: "0.16em", textTransform: "uppercase", marginTop: 24 }}>
+            iPad · landscape · light mode · gloved-tap targets
+          </div>
+        </section>
+      );
+
+      /* ─── FUTURE IMPACT ──────────────────────────────────────────────── */
+      const Future = () => (
+        <section style={{ padding: "60px 64px 120px", maxWidth: 1280, margin: "0 auto" }}>
+          <TwoCol
+            left={<><Label>What's next</Label><SectionTitle size={48}>Where it <span style={{ fontFamily: serif, fontStyle: "italic", fontWeight: 400 }}>goes</span></SectionTitle></>}
+            right={<>
+              <Body size={17}>The Haneda rollout was the foundation. Billing has been added as a new layer — turning ground ops data into invoicing without a separate system. New features ship weekly.</Body>
+              <ol style={{ margin: "24px 0 0", paddingLeft: 0, listStyle: "none" }}>
+                {[
+                  ["More airports, more carriers.",          "Okinawa is live; the platform is being scaled with JAL IT toward broader implementation across their network."],
+                  ["Ground-ops data → billing.",             "A new layer turns operational telemetry into invoicing — eliminating a separate system, with longer-term targets in OCC workload and turnaround time."],
+                  ["Every new airport teaches the next.",    "Each location is also a data set — the more the platform learns across locations, the better the playbook gets for the next rollout."],
+                ].map(([t, d], i) => (
+                  <li key={i} style={{ display: "grid", gridTemplateColumns: "32px 1fr", gap: 16, padding: "20px 0", borderTop: i===0 ? "none" : `1px solid ${C.rule}` }}>
+                    <span style={{ fontFamily: sans, fontSize: 14, color: C.coral, fontWeight: 600 }}>0{i+1}</span>
+                    <div>
+                      <div style={{ fontFamily: sans, fontWeight: 600, fontSize: 17, color: C.ink, marginBottom: 4 }}>{t}</div>
+                      <div style={{ fontFamily: sans, fontSize: 15, color: C.ink2, lineHeight: 1.55 }}>{d}</div>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            </>}
+          />
+        </section>
+      );
+
+      /* ─── FOOTER ─────────────────────────────────────────────────────── */
+      const Footer = () => (
+        <footer data-cursor="footer" style={{ padding: "120px 64px 48px", borderTop: `1px solid ${C.rule}`, maxWidth: 1280, margin: "0 auto" }}>
+          <div style={{ fontFamily: sans, fontWeight: 700, fontSize: "clamp(56px, 9vw, 140px)", letterSpacing: "-0.05em", lineHeight: 0.92, marginBottom: 60 }}>
+            Want to see <span style={{ color: C.coral, fontFamily: serif, fontStyle: "italic", fontWeight: 400 }}>more</span>?
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 32, paddingTop: 32, borderTop: `1px solid ${C.rule}` }}>
+            <div>
+              <Label>Email</Label>
+              <a href="mailto:christinajdoolan@hotmail.com" data-cursor="link" style={{ fontFamily: sans, fontSize: 18, color: C.ink, textDecoration: "none", fontWeight: 500 }}>christinajdoolan@hotmail.com</a>
+            </div>
+            <div>
+              <Label>LinkedIn</Label>
+              <a href="https://www.linkedin.com/in/christina-doolan" target="_blank" rel="noopener noreferrer" data-cursor="link" style={{ fontFamily: sans, fontSize: 18, color: C.ink, textDecoration: "none", fontWeight: 500 }}>/christina-doolan</a>
+            </div>
+            <div>
+              <Label>Resume</Label>
+              <a href="#" data-cursor="link" style={{ fontFamily: sans, fontSize: 18, color: C.ink, textDecoration: "none", fontWeight: 500 }}>Download PDF →</a>
+            </div>
+            <div style={{ textAlign: "right" }}>
+              <Label>©</Label>
+              <div style={{ fontFamily: sans, fontSize: 18, color: C.ink, fontWeight: 500 }}>Christina Doolan, 2026</div>
+            </div>
+          </div>
+        </footer>
+      );
+
+      /* ─── PAGE ───────────────────────────────────────────────────────── */
+      const CaseStudy = () => {
+        const containerRef = useRef(null);
+        const [showTop, setShowTop] = useState(false);
+
+        useEffect(() => {
+          const onScroll = () => setShowTop(window.scrollY > 400);
+          window.addEventListener("scroll", onScroll, { passive: true });
+          return () => window.removeEventListener("scroll", onScroll);
+        }, []);
+
+        return (
+          <div ref={containerRef} data-cursor="default" style={{ background: C.bg, color: C.ink, cursor: "none", position: "relative" }}>
+            <ColorCursor containerRef={containerRef} />
+            <Nav />
+            <Hero containerRef={containerRef} />
+            <Overview />
+            <Challenge />
+            <Process />
+            <Research />
+            <Personas />
+            <POVHMW />
+            <Goals />
+            <Flow />
+            <Wireframes />
+            <Branding />
+            <HighFi />
+            <BeforeAfter />
+            <Results />
+            <FinalMockup />
+            <Future />
+
+            {/* Prev / Next */}
+            <section style={{ padding: "60px 64px 80px", maxWidth: 1280, margin: "0 auto" }}>
+              <Rule />
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, paddingTop: 48 }}>
+                <a href="case-study-3.html" data-cursor="link" style={{ textDecoration: "none", color: "inherit" }}>
+                  <Label>← Previous</Label>
+                  <div style={{ fontFamily: serif, fontStyle: "italic", fontSize: 36, color: C.ink, lineHeight: 1.1 }}>Stakeholder-to-Feature Pipeline</div>
+                </a>
+                <a href="case-study-2.html" data-cursor="link" style={{ textDecoration: "none", color: "inherit", textAlign: "right" }}>
+                  <Label>Next case study →</Label>
+                  <div style={{ fontFamily: serif, fontStyle: "italic", fontSize: 36, color: C.coral, lineHeight: 1.1 }}>Cross-Platform Design System</div>
+                </a>
+              </div>
+            </section>
+
+            <Footer />
+
+            {/* Back to top */}
+            {showTop && (
+              <button data-cursor="link" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+                style={{ position: "fixed", bottom: 24, right: 24, width: 44, height: 44, borderRadius: "50%", background: "#fff", border: `1px solid ${C.rule}`, cursor: "none", fontFamily: sans, fontSize: 18, color: C.ink, zIndex: 20, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                ↑
+              </button>
+            )}
+          </div>
+        );
+      };
+
+      ReactDOM.createRoot(document.getElementById("root")).render(<CaseStudy />);
+    </script>
+  </body>
+</html>

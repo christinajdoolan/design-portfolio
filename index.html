@@ -1,0 +1,1648 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Christina Doolan — Portfolio</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter+Tight:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Instrument+Serif:ital@0;1&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+      html { scroll-behavior: smooth; }
+      html, body {
+        background: #F2EEE6;
+        font-family: "Inter Tight", system-ui, sans-serif;
+        -webkit-font-smoothing: antialiased;
+        height: 100%;
+      }
+      body { display: flex; flex-direction: column; }
+      #root { flex: 1; display: flex; flex-direction: column; height: 100vh; }
+      a { color: inherit; text-decoration: none; }
+    </style>
+
+    <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" crossorigin="anonymous"></script>
+    <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" crossorigin="anonymous"></script>
+    <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+
+/* ─── Constants ─────────────────────────────────────────────────── */
+
+const INK = "#0A0E1A";
+const ACCENT = "#FF5C2A";
+
+const NAV_TABS = [
+  ["home", "Home"],
+  ["portfolio", "Portfolio"],
+  ["resume", "Resume"],
+];
+
+const navResetBtn = {
+  appearance: "none",
+  border: "none",
+  background: "transparent",
+  cursor: "pointer",
+  fontFamily: '"Inter Tight", system-ui, sans-serif',
+  padding: 0,
+  margin: 0,
+};
+
+/* ─── OrbV2 ─────────────────────────────────────────────────────── */
+
+const OrbV2 = ({ containerRef, themeColor = "#FF5C2A", scrollProgress = 0 }) => {
+  const orbRef = React.useRef(null);
+  const rafRef = React.useRef(null);
+  const targetRef = React.useRef({ x: 0.5, y: 0.5 });
+  const currentRef = React.useRef({ x: 0.5, y: 0.4 });
+  const tRef = React.useRef(0);
+
+  React.useEffect(() => {
+    const el = orbRef.current;
+    if (!el) return;
+    const container = containerRef?.current || el.parentElement;
+
+    const onMove = (e) => {
+      if (!container) return;
+      const r = container.getBoundingClientRect();
+      const x = (e.clientX - r.left) / r.width;
+      const y = (e.clientY - r.top) / r.height;
+      targetRef.current = { x: Math.max(0, Math.min(1, x)), y: Math.max(0, Math.min(1, y)) };
+    };
+
+    const tick = () => {
+      tRef.current += 0.005;
+      const t = tRef.current;
+      const driftX = 0.5 + Math.sin(t * 0.6) * 0.18;
+      const driftY = 0.4 + Math.cos(t * 0.5) * 0.14;
+      const blend = 0.4;
+      const tx = driftX * (1 - blend) + targetRef.current.x * blend;
+      const ty = driftY * (1 - blend) + targetRef.current.y * blend;
+      const ease = 0.05;
+      currentRef.current.x += (tx - currentRef.current.x) * ease;
+      currentRef.current.y += (ty - currentRef.current.y) * ease;
+      const cx = currentRef.current.x * 100;
+      const cy = currentRef.current.y * 100;
+      el.style.transform = `translate3d(${cx - 50}%, ${cy - 50}%, 0) rotate(${Math.sin(t * 0.3) * 12}deg)`;
+      rafRef.current = requestAnimationFrame(tick);
+    };
+
+    if (container) container.addEventListener("mousemove", onMove);
+    rafRef.current = requestAnimationFrame(tick);
+    return () => {
+      cancelAnimationFrame(rafRef.current);
+      if (container) container.removeEventListener("mousemove", onMove);
+    };
+  }, [containerRef]);
+
+  const gradient = `radial-gradient(circle at 30% 30%, #FFE3B0 0%, ${themeColor} 35%, #FFB3D1 65%, #C7DBFF 100%)`;
+  const size = 600 + scrollProgress * 200;
+
+  return (
+    <div
+      ref={orbRef}
+      style={{
+        position: "absolute",
+        left: "50%",
+        top: "50%",
+        width: size,
+        height: size,
+        marginLeft: -size / 2,
+        marginTop: -size / 2,
+        borderRadius: "50%",
+        background: gradient,
+        filter: "blur(40px) saturate(1.15)",
+        opacity: 0.48,
+        pointerEvents: "none",
+        willChange: "transform, background",
+        mixBlendMode: "multiply",
+        transition: "background 1.2s ease, width 1s ease, height 1s ease, margin 1s ease",
+      }}
+    />
+  );
+};
+
+/* ─── ArtfulName ────────────────────────────────────────────────── */
+
+const ArtfulName = () => {
+  const [phase, setPhase] = React.useState(0);
+  const [hover, setHover] = React.useState(-1);
+
+  React.useEffect(() => {
+    const t = setTimeout(() => setPhase(1), 120);
+    return () => clearTimeout(t);
+  }, []);
+
+  const words = ["Christina", "Doolan"];
+  let gi = 0;
+
+  return (
+    <div
+      data-cursor="art"
+      style={{ position: "relative", width: "100%", userSelect: "none" }}
+    >
+      <h1
+        style={{
+          margin: 0,
+          fontFamily: '"Inter Tight", system-ui, sans-serif',
+          fontWeight: 700,
+          fontSize: "clamp(72px, 13.5vw, 232px)",
+          lineHeight: 0.9,
+          letterSpacing: "-0.045em",
+          color: INK,
+        }}
+      >
+        {words.map((word, wi) => (
+          <span key={wi} style={{ display: "block", whiteSpace: "nowrap" }}>
+            {word.split("").map((ch) => {
+              const i = gi++;
+              const isHover = hover === i;
+              const enterDelay = 0.045 * i;
+              const visible = phase >= 1;
+              return (
+                <span
+                  key={i}
+                  onMouseEnter={() => setHover(i)}
+                  onMouseLeave={() => setHover(-1)}
+                  style={{
+                    display: "inline-block",
+                    transform: visible ? "translate3d(0,0,0)" : "translate3d(0, 0.42em, 0)",
+                    opacity: visible ? 1 : 0,
+                    transition: `opacity 0.65s cubic-bezier(0.2,0.8,0.2,1) ${enterDelay}s, transform 0.8s cubic-bezier(0.2,1.1,0.3,1) ${enterDelay}s`,
+                    willChange: "transform, opacity",
+                  }}
+                >
+                  <span
+                    style={{
+                      display: "inline-block",
+                      transform: isHover ? "translateY(-0.06em)" : "translateY(0)",
+                      transition: "transform 0.35s cubic-bezier(0.2,1.1,0.3,1)",
+                    }}
+                  >
+                    {ch}
+                  </span>
+                </span>
+              );
+            })}
+            {wi === words.length - 1 && (
+              <span
+                style={{
+                  display: "inline-block",
+                  opacity: phase >= 1 ? 1 : 0,
+                  transform: phase >= 1 ? "scale(1)" : "scale(0.4)",
+                  transition: "opacity 0.6s ease 0.7s, transform 0.6s cubic-bezier(0.2,1.4,0.3,1) 0.7s",
+                }}
+              >
+                .
+              </span>
+            )}
+          </span>
+        ))}
+      </h1>
+    </div>
+  );
+};
+
+/* ─── ColorCursor ───────────────────────────────────────────────── */
+
+const ColorCursor = ({ containerRef }) => {
+  const [pos, setPos] = React.useState({ x: -100, y: -100 });
+  const [variant, setVariant] = React.useState("default");
+  const [visible, setVisible] = React.useState(false);
+
+  React.useEffect(() => {
+    const el = containerRef?.current;
+    if (!el) return;
+
+    const onMove = (e) => {
+      const r = el.getBoundingClientRect();
+      setPos({ x: e.clientX - r.left, y: e.clientY - r.top });
+      setVisible(true);
+      let target = e.target;
+      let v = "default";
+      while (target && target !== el) {
+        if (target.dataset && target.dataset.cursor) { v = target.dataset.cursor; break; }
+        target = target.parentElement;
+      }
+      setVariant(v);
+    };
+    const onLeave = () => setVisible(false);
+
+    el.addEventListener("mousemove", onMove);
+    el.addEventListener("mouseleave", onLeave);
+    return () => {
+      el.removeEventListener("mousemove", onMove);
+      el.removeEventListener("mouseleave", onLeave);
+    };
+  }, [containerRef]);
+
+  const variants = {
+    default: { size: 16,  color: "#FF5C2A", blend: "normal",    label: null },
+    art:     { size: 28,  color: "#FFFFFF", blend: "difference", label: null },
+    work:    { size: 90,  color: "#FF5C2A", blend: "normal",     label: "VIEW" },
+    project: { size: 120, color: "#FF5C2A", blend: "normal",     label: "OPEN →" },
+    footer:  { size: 60,  color: "#FF5C2A", blend: "normal",     label: "✶" },
+    link:    { size: 36,  color: "#FF5C2A", blend: "normal",     label: null },
+  };
+  const v = variants[variant] || variants.default;
+
+  return (
+    <div
+      style={{
+        position: "absolute",
+        left: pos.x,
+        top: pos.y,
+        width: v.size,
+        height: v.size,
+        marginLeft: -v.size / 2,
+        marginTop: -v.size / 2,
+        borderRadius: "50%",
+        background: v.color,
+        mixBlendMode: v.blend,
+        pointerEvents: "none",
+        zIndex: 100,
+        transition: "width 0.25s cubic-bezier(0.2,0.9,0.2,1), height 0.25s cubic-bezier(0.2,0.9,0.2,1), margin 0.25s cubic-bezier(0.2,0.9,0.2,1), background 0.25s, opacity 0.2s",
+        opacity: visible ? 1 : 0,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        color: "#fff",
+        fontFamily: '"Inter Tight", sans-serif',
+        fontSize: 11,
+        fontWeight: 600,
+        letterSpacing: "0.14em",
+        textTransform: "uppercase",
+      }}
+    >
+      {v.label}
+    </div>
+  );
+};
+
+/* ─── PROJECTS_V2 + ScrollProjects ─────────────────────────────── */
+
+const PROJECTS_V2 = [
+  {
+    id: "halo",
+    num: "01",
+    title: "HALO Design System",
+    role: "Lead Designer, Design Systems · 2025",
+    desc: "Built a cross-platform design system from scratch—semantic tokens, shared components, implementation tooling, and dual color modes across iOS, Android, and web.",
+    metrics: ["500+ tokens", "100+ components", "3 platforms"],
+    accent: "#1779DA",
+    thumbBg: "#0E1424",
+    thumbType: "dark",
+    thumbImgDark: "images/task-details.png",
+    thumbImgLight: "images/task+details-LM.png",
+    link: "halo-design-system.html",
+  },
+  {
+    id: "ipad",
+    num: "02",
+    title: "HALO for JAL",
+    role: "Lead Product Designer · 2025",
+    desc: "Redesigned HALO for iPad Mini, transforming a phone-first experience into a tablet-first operational platform for Japan Airlines ramp agents and turnaround leads.",
+    metrics: ["4-month PoC", "3 user groups", "Tablet-first redesign"],
+    accent: "#FF5C2A",
+    thumbBg: "#0E1424",
+    thumbType: "dark",
+    thumbImg: "images/map.png",
+    link: "halo-for-jal.html",
+  },
+  {
+    id: "pipeline",
+    num: "03",
+    title: "WFS Product Definition",
+    role: "Lead Product Designer · 2026",
+    desc: "Evaluated a 29-page enterprise RFP, identified product gaps, and transformed hundreds of requirements into a focused roadmap spanning billing, KPI tracking, and operational reporting.",
+    metrics: ["29-page RFP", "6 committed initiatives", "1 product roadmap"],
+    accent: "#7B5EA7",
+    thumbBg: "#0E1424",
+    thumbType: "dark",
+    thumbImg: "images/OCC-review-overview.png",
+    thumbFit: "contain",
+    link: "wfs-product-definition.html",
+  },
+];
+
+const ProjectThumb = ({ p, active }) => (
+  <div
+    style={{
+      position: "absolute",
+      inset: 0,
+      background: p.thumbBg,
+      borderRadius: 18,
+      overflow: "hidden",
+      opacity: active ? 1 : 0,
+      transform: active ? "scale(1)" : "scale(1.04)",
+      transition: "opacity 0.7s cubic-bezier(0.2,0.9,0.2,1), transform 0.9s cubic-bezier(0.2,0.9,0.2,1)",
+    }}
+  >
+    {p.thumbImgDark && p.thumbImgLight ? (
+      <>
+        <img src={p.thumbImgDark} alt="" style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"contain", objectPosition:"center center", clipPath:"polygon(0 0, 100% 0, 100% 36%, 0 64%)" }} />
+        <img src={p.thumbImgLight} alt="" style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"contain", objectPosition:"center center", clipPath:"polygon(0 64%, 100% 36%, 100% 100%, 0 100%)" }} />
+        <div style={{ position:"absolute", left:0, right:0, top:"calc(50% - 1px)", height:2, background:"rgba(255,255,255,0.25)", transform:"rotate(-15.5deg) scaleX(1.4)", pointerEvents:"none" }} />
+      </>
+    ) : p.thumbDevice === "ipad" && p.thumbImg ? (
+      <div style={{ position:"absolute", inset:"12% 8%", background:"#1C1C1E", borderRadius:16, overflow:"hidden", boxShadow:"0 0 0 2px #3A3A3A, 0 24px 48px rgba(0,0,0,0.35)" }}>
+        <img src={p.thumbImg} alt={p.title} style={{ width:"100%", height:"100%", objectFit:"cover", objectPosition:"center top" }} />
+      </div>
+    ) : p.thumbImg ? (
+      <img src={p.thumbImg} alt={p.title} style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit: p.thumbFit || "cover", objectPosition:"center" }} />
+    ) : null}
+    <div style={{ position:"absolute", inset:0, background: p.thumbType === "dark" ? "linear-gradient(to top, rgba(10,14,26,0.72) 0%, rgba(10,14,26,0.1) 50%, transparent 100%)" : "linear-gradient(to top, rgba(10,14,26,0.55) 0%, rgba(10,14,26,0.05) 50%, transparent 100%)" }} />
+    <div
+      style={{
+        position: "absolute",
+        left: 28,
+        bottom: 28,
+        right: 28,
+        color: "rgba(255,255,255,0.92)",
+        fontFamily: '"Inter Tight", sans-serif',
+        fontSize: 12,
+        letterSpacing: "0.14em",
+        textTransform: "uppercase",
+        display: "flex",
+        justifyContent: "space-between",
+      }}
+    >
+      <span>{p.title}</span>
+      <span>{p.num}</span>
+    </div>
+  </div>
+);
+
+const ScrollProjects = ({ onActiveChange }) => {
+  const [active, setActive] = React.useState(0);
+  const wrapperRef = React.useRef(null);
+  const panelRef = React.useRef(null);
+  const sectionRefs = React.useRef([]);
+  const activeRef = React.useRef(0);
+  const onChangeRef = React.useRef(onActiveChange);
+
+  React.useEffect(() => { onChangeRef.current = onActiveChange; }, [onActiveChange]);
+
+  React.useEffect(() => {
+    let root = null;
+    if (wrapperRef.current) {
+      let p = wrapperRef.current.parentElement;
+      while (p && p !== document.documentElement) {
+        const ov = getComputedStyle(p).overflowY;
+        if (ov === "auto" || ov === "scroll") { root = p; break; }
+        p = p.parentElement;
+      }
+    }
+
+    const update = () => {
+      const wrapper = wrapperRef.current;
+      if (!wrapper) return;
+
+      const rootRect = root ? root.getBoundingClientRect() : { top: 0, height: window.innerHeight };
+
+      // Active section: which section spans the scroll container center
+      const screenCenter = rootRect.top + rootRect.height * 0.5;
+      sectionRefs.current.forEach((el, i) => {
+        if (!el) return;
+        const r = el.getBoundingClientRect();
+        if (r.top <= screenCenter && r.bottom >= screenCenter) {
+          if (activeRef.current !== i) {
+            activeRef.current = i;
+            setActive(i);
+            onChangeRef.current && onChangeRef.current(i, PROJECTS_V2[i]);
+          }
+        }
+      });
+    };
+
+    const scroller = root || window;
+    scroller.addEventListener("scroll", update, { passive: true });
+    window.addEventListener("resize", update, { passive: true });
+    const raf = requestAnimationFrame(update);
+    return () => {
+      scroller.removeEventListener("scroll", update);
+      window.removeEventListener("resize", update);
+      cancelAnimationFrame(raf);
+    };
+  }, []);
+
+  return (
+    <div ref={wrapperRef} style={{ position: "relative", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 80 }}>
+      <div style={{ display: "flex", flexDirection: "column" }}>
+        {PROJECTS_V2.map((p, i) => (
+          <div
+            key={p.id}
+            ref={(el) => (sectionRefs.current[i] = el)}
+            data-idx={i}
+            data-cursor="project"
+            onClick={() => { if (p.link) window.location.href = p.link; }}
+            style={{
+              minHeight: "92vh",
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "center",
+              padding: "60px 0",
+              borderTop: i === 0 ? "none" : "1px solid rgba(10,14,26,0.1)",
+            }}
+          >
+            <div
+              style={{
+                fontFamily: '"Inter Tight", sans-serif',
+                fontSize: 12,
+                letterSpacing: "0.18em",
+                textTransform: "uppercase",
+                color: p.accent,
+                marginBottom: 24,
+                fontVariantNumeric: "tabular-nums",
+              }}
+            >
+              ({p.num} / 03) — {p.role.split("·")[0].trim()}
+            </div>
+            <div
+              style={{
+                fontFamily: '"Inter Tight", sans-serif',
+                fontWeight: 700,
+                fontSize: "clamp(64px, 8vw, 112px)",
+                lineHeight: 0.92,
+                letterSpacing: "-0.04em",
+                marginBottom: 32,
+                color: "#0A0E1A",
+              }}
+            >
+              {p.title}
+            </div>
+            <div
+              style={{
+                fontSize: 11,
+                letterSpacing: "0.14em",
+                textTransform: "uppercase",
+                color: "rgba(10,14,26,0.55)",
+                marginBottom: 12,
+              }}
+            >
+              {p.role}
+            </div>
+            <div
+              style={{
+                fontSize: 19,
+                lineHeight: 1.5,
+                color: "rgba(10,14,26,0.78)",
+                maxWidth: 540,
+                marginBottom: 40,
+                textWrap: "pretty",
+              }}
+            >
+              {p.desc}
+            </div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 40 }}>
+              {p.metrics.map((m) => (
+                <span
+                  key={m}
+                  style={{
+                    padding: "8px 14px",
+                    border: `1px solid ${p.accent}55`,
+                    borderRadius: 999,
+                    fontSize: 12,
+                    color: p.accent,
+                    fontFamily: '"Inter Tight", sans-serif',
+                    letterSpacing: "0.04em",
+                  }}
+                >
+                  {m}
+                </span>
+              ))}
+            </div>
+            <a
+              href={p.link || "#"}
+              data-cursor="link"
+              style={{
+                fontFamily: '"Inter Tight", sans-serif',
+                fontSize: 14,
+                letterSpacing: "0.12em",
+                textTransform: "uppercase",
+                color: "#0A0E1A",
+                textDecoration: "none",
+                borderBottom: `1px solid ${p.accent}`,
+                paddingBottom: 4,
+                alignSelf: "flex-start",
+                fontWeight: 600,
+              }}
+            >
+              Read case study →
+            </a>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ position: "relative" }}>
+        <div
+          ref={panelRef}
+          data-cursor="default"
+          style={{
+            position: "sticky",
+            top: 80,
+            width: "100%",
+            height: "calc(100vh - 200px)",
+            borderRadius: 18,
+            overflow: "hidden",
+            boxShadow: "0 30px 80px rgba(14,20,36,0.18), 0 6px 16px rgba(14,20,36,0.08)",
+          }}
+        >
+          {PROJECTS_V2.map((p, i) => (
+            <ProjectThumb key={p.id} p={p} active={i === active} />
+          ))}
+          <div
+            style={{
+              position: "absolute",
+              top: 20,
+              left: 20,
+              padding: "6px 12px",
+              borderRadius: 999,
+              background: "rgba(255,255,255,0.92)",
+              backdropFilter: "blur(8px)",
+              fontFamily: '"Inter Tight", sans-serif',
+              fontSize: 12,
+              letterSpacing: "0.1em",
+              textTransform: "uppercase",
+              color: "rgba(0,0,0,0.7)",
+              fontVariantNumeric: "tabular-nums",
+            }}
+          >
+            {String(active + 1).padStart(2, "0")} / 03
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/* ─── GlobalNav ─────────────────────────────────────────────────── */
+
+const GlobalNav = ({ active, onNavigate, accent = "#FF5C2A" }) => {
+
+  return (
+    <div
+      style={{
+        position: "sticky",
+        top: 0,
+        zIndex: 50,
+        padding: "20px 48px",
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        background: "rgba(242,238,230,0.74)",
+        backdropFilter: "blur(14px) saturate(1.4)",
+        WebkitBackdropFilter: "blur(14px) saturate(1.4)",
+        borderBottom: "1px solid rgba(10,14,26,0.08)",
+      }}
+    >
+      <button
+        type="button"
+        onClick={() => onNavigate && onNavigate("home")}
+        style={{ ...navResetBtn, display: "flex", alignItems: "center", color: "#0A0E1A" }}
+      >
+        <div style={{ width:32, height:32, borderRadius:8, background:"#0A0E1A", color:"#fff", display:"flex", alignItems:"center", justifyContent:"center", fontSize:14, marginRight:10, flexShrink:0 }}>◆</div>
+        <div style={{ textAlign: "left" }}>
+          <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: "0.04em", textTransform: "uppercase" }}>Christina Doolan</div>
+          <div style={{ fontSize: 10, letterSpacing: "0.14em", textTransform: "uppercase", color: "rgba(10,14,26,0.5)", fontWeight: 500 }}>UX/UI Designer</div>
+        </div>
+      </button>
+
+      <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+        {NAV_TABS.map(([id, label]) => {
+          const isActive = active === id;
+          return (
+            <button
+              key={id}
+              type="button"
+              onClick={() => onNavigate && onNavigate(id)}
+              style={{
+                ...navResetBtn,
+                position: "relative",
+                display: "inline-flex",
+                alignItems: "center",
+                whiteSpace: "nowrap",
+                padding: "8px 14px",
+                fontSize: 12,
+                letterSpacing: "0.12em",
+                textTransform: "uppercase",
+                color: isActive ? "#0A0E1A" : "rgba(10,14,26,0.5)",
+                fontWeight: isActive ? 600 : 500,
+                transition: "color 0.25s ease",
+              }}
+            >
+              {isActive && (
+                <span
+                  style={{
+                    display: "inline-block",
+                    width: 6,
+                    height: 6,
+                    borderRadius: "50%",
+                    background: accent,
+                    marginRight: 9,
+                    flexShrink: 0,
+                    transition: "background 0.4s ease",
+                  }}
+                />
+              )}
+              {label}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+/* ─── Homepage styles ───────────────────────────────────────────── */
+
+const labelV2 = {
+  fontFamily: '"Inter Tight", sans-serif',
+  fontSize: 11,
+  letterSpacing: "0.18em",
+  textTransform: "uppercase",
+  color: "rgba(10,14,26,0.5)",
+  marginBottom: 10,
+  fontVariantNumeric: "tabular-nums",
+};
+const valV2 = {
+  fontFamily: '"Inter Tight", sans-serif',
+  fontSize: 18,
+  fontWeight: 600,
+  color: "#0A0E1A",
+  marginBottom: 4,
+  letterSpacing: "-0.01em",
+};
+const subV2 = {
+  fontFamily: '"Inter Tight", sans-serif',
+  fontSize: 13,
+  color: "rgba(10,14,26,0.55)",
+};
+const footerLinkV2 = {
+  fontFamily: '"Inter Tight", sans-serif',
+  fontSize: 18,
+  fontWeight: 500,
+  color: "#0A0E1A",
+  textDecoration: "none",
+  letterSpacing: "-0.01em",
+};
+
+/* ─── HomepageKineticV2 ─────────────────────────────────────────── */
+
+const HomepageKineticV2 = ({ onNavigate }) => {
+  const containerRef = React.useRef(null);
+  const [activeProject, setActiveProject] = React.useState(0);
+  const [scrollProg, setScrollProg] = React.useState(0);
+
+  React.useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    let scroller = el.parentElement;
+    while (
+      scroller &&
+      getComputedStyle(scroller).overflowY !== "auto" &&
+      getComputedStyle(scroller).overflowY !== "scroll"
+    ) {
+      scroller = scroller.parentElement;
+      if (!scroller || scroller === document.body) break;
+    }
+    const target = scroller || window;
+    const onScroll = () => {
+      const node = scroller || document.documentElement;
+      const max = (node.scrollHeight || 0) - (node.clientHeight || 0);
+      if (!max || !Number.isFinite(max) || max <= 0) { setScrollProg(0); return; }
+      const raw = (node.scrollTop || 0) / max;
+      const p = Number.isFinite(raw) ? Math.max(0, Math.min(1, raw)) : 0;
+      setScrollProg(p);
+    };
+    target.addEventListener("scroll", onScroll, { passive: true });
+    onScroll();
+    return () => target.removeEventListener("scroll", onScroll);
+  }, []);
+
+  const themeColor = "#FF5C2A";
+
+  return (
+    <div
+      ref={containerRef}
+      data-cursor="default"
+      style={{
+        width: "100%",
+        minHeight: 4800,
+        background: "#F2EEE6",
+        position: "relative",
+        overflow: "clip",
+        fontFamily: '"Inter Tight", system-ui, sans-serif',
+        color: "#0A0E1A",
+        cursor: "none",
+      }}
+    >
+      <div style={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
+        <div style={{ position: "sticky", top: 0, width: "100%", height: "100vh", overflow: "visible" }}>
+          <OrbV2 containerRef={containerRef} themeColor={themeColor} scrollProgress={scrollProg} />
+        </div>
+      </div>
+
+      <ColorCursor containerRef={containerRef} />
+
+      <GlobalNav active="home" onNavigate={onNavigate} accent={themeColor} />
+
+      {/* Hero */}
+      <section
+        style={{
+          position: "relative",
+          zIndex: 2,
+          padding: "20px 48px 80px",
+          minHeight: "92vh",
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "center",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "baseline",
+            marginBottom: 10,
+            fontSize: 12,
+            letterSpacing: "0.16em",
+            textTransform: "uppercase",
+            color: "rgba(10,14,26,0.6)",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <span style={{ display: "inline-block", width: 28, height: 1, background: "rgba(10,14,26,0.4)" }} />
+            <span>Design Portfolio </span>
+          </div>
+          <div>(Lead UX/UI Designer)</div>
+        </div>
+
+        <ArtfulName />
+
+        
+      </section>
+
+      {/* About */}
+      <section
+        id="about"
+        data-cursor="default"
+        style={{
+          position: "relative",
+          zIndex: 2,
+          padding: "130px 48px 40px",
+          borderTop: "1px solid rgba(10,14,26,0.12)",
+        }}
+      >
+        <div style={{ ...labelV2, marginBottom: 44 }}>About me</div>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "0.82fr 1.18fr",
+            gap: 64,
+            alignItems: "start",
+          }}
+        >
+          <div style={{ position: "relative" }}>
+            <div style={{ borderRadius: 20, overflow: "hidden", boxShadow: "0 24px 60px rgba(14,20,36,0.14)" }}>
+              <img
+                src="images/Christina_bio_pic.png"
+                alt="Christina Doolan"
+                style={{
+                  display: "block",
+                  width: "100%",
+                  aspectRatio: "1 / 1",
+                  objectFit: "cover",
+                  objectPosition: "50% 25%",
+                  transform: "scale(1.25)",
+                  transformOrigin: "50% 50%",
+                }}
+              />
+            </div>
+            <div
+              style={{
+                marginTop: 16,
+                display: "flex",
+                justifyContent: "space-between",
+                fontSize: 11,
+                letterSpacing: "0.16em",
+                textTransform: "uppercase",
+                color: "rgba(10,14,26,0.5)",
+                fontVariantNumeric: "tabular-nums",
+              }}
+            >
+              <span>Christina Doolan</span>
+              
+            </div>
+          </div>
+
+          <div>
+            <div
+              style={{
+                fontSize: "clamp(32px, 3.4vw, 54px)",
+                fontWeight: 600,
+                letterSpacing: "-0.03em",
+                lineHeight: 1.05,
+                textWrap: "balance",
+              }}
+            >
+              I transform complex workflows into{" "}
+              <span style={{ fontFamily: '"Instrument Serif", serif', fontStyle: "italic", fontWeight: 400, color: "#0A0E1A" }}>
+                intuitive
+              </span>{" "}
+              products.
+            </div>
+            <p
+              style={{
+                fontSize: 19,
+                lineHeight: 1.62,
+                color: "rgba(10,14,26,0.74)",
+                maxWidth: 580,
+                marginTop: 30,
+                textWrap: "pretty",
+              }}
+            >
+             My work spans research, product strategy, interaction design, and design systems. I partner closely with users, stakeholders, and engineers to uncover complexity, define the right problems to solve, and build solutions that scale across platforms, teams, and real-world operations.
+            </p>
+            <p
+              style={{
+                fontSize: 19,
+                lineHeight: 1.62,
+                color: "rgba(10,14,26,0.74)",
+                maxWidth: 580,
+                marginTop: 18,
+                textWrap: "pretty",
+              }}
+            >
+              Lately that means semantic token systems, coded prototypes, and AI-assisted design workflows.
+            </p>
+
+            <div
+              style={{
+                marginTop: 48,
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: "36px 40px",
+                paddingTop: 32,
+                borderTop: "1px solid rgba(10,14,26,0.15)",
+              }}
+            >
+              <div>
+                <div style={labelV2}>Education</div>
+                <div style={valV2}>USC — BA Cognitive Science</div>
+                <div style={subV2}>Summa Cum Laude · GPA 3.97 </div>
+              </div>
+              <div>
+                <div style={labelV2}>Approach</div>
+                <div style={valV2}>End-to-end product design</div>
+                <div style={subV2}>Design systems · Coded prototyping · AI-assisted audits</div>
+              </div>
+              
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Work intro */}
+      <section
+        id="work"
+        data-cursor="work"
+        style={{
+          position: "relative",
+          zIndex: 2,
+          padding: "120px 48px 60px",
+          borderTop: "1px solid rgba(10,14,26,0.12)",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "baseline",
+            marginBottom: 20,
+          }}
+        >
+          <div>
+            <div style={{ ...labelV2, marginBottom: 16 }}>Selected work</div>
+            <div
+              style={{
+                fontWeight: 700,
+                fontSize: "clamp(48px, 7vw, 96px)",
+                letterSpacing: "-0.04em",
+                lineHeight: 0.9,
+              }}
+            >
+              From discovery<br />
+              <span style={{ color: "rgba(10,14,26,0.4)" }}>to delivery.</span>
+            </div>
+          </div>
+          
+        </div>
+      </section>
+
+      {/* Scroll projects */}
+      <section
+        data-cursor="work"
+        style={{ position: "relative", zIndex: 2, padding: "0 48px 80px" }}
+      >
+        <ScrollProjects onActiveChange={setActiveProject} />
+      </section>
+
+      {/* Footer */}
+      <footer
+        id="contact"
+        data-cursor="footer"
+        style={{
+          position: "relative",
+          zIndex: 2,
+          padding: "160px 48px 48px",
+          borderTop: "1px solid rgba(10,14,26,0.12)",
+        }}
+      >
+        <div
+          style={{
+            fontWeight: 700,
+            fontSize: "clamp(56px, 11vw, 180px)",
+            letterSpacing: "-0.05em",
+            lineHeight: 0.88,
+            marginBottom: 60,
+            textWrap: "balance",
+          }}
+        >
+          Let's <span style={{ color: "#FF5C2A" }}>talk</span>.
+        </div>
+
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr 1fr 1fr",
+            gap: 32,
+            paddingTop: 32,
+            borderTop: "1px solid rgba(10,14,26,0.15)",
+          }}
+        >
+          <div>
+            <div style={labelV2}>Email</div>
+            <a href="mailto:christinajdoolan@gmail.com" data-cursor="link" style={footerLinkV2}>christinajdoolan@gmail.com</a>
+          </div>
+          <div>
+            <div style={labelV2}>LinkedIn</div>
+            <a href="https://www.linkedin.com/in/christina-doolan-36b1a224a/" data-cursor="link" style={footerLinkV2}>/christina-doolan</a>
+          </div>
+          <div>
+            <div style={labelV2}>Resume</div>
+            <a
+              href="#"
+              data-cursor="link"
+              style={footerLinkV2}
+              onClick={(e) => { e.preventDefault(); onNavigate && onNavigate("resume"); }}
+            >View resume →</a>
+          </div>
+          <div style={{ textAlign: "right" }}>
+            <div style={labelV2}>Christina Doolan</div>
+            <div style={{ ...footerLinkV2, fontVariantNumeric: "tabular-nums" }}>2026 ©</div>
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
+};
+
+/* ─── PortfolioView ─────────────────────────────────────────────── */
+
+const CASE_LINKS = {
+  halo: "halo-design-system.html",
+  ipad: "halo-for-jal.html",
+  pipeline: "wfs-product-definition.html",
+};
+
+const PortfolioCard = ({ p, idx }) => {
+  const [hover, setHover] = React.useState(false);
+  const href = CASE_LINKS[p.id];
+  const year = (p.role.split("·")[1] || "").trim();
+  const roleTitle = p.role.split("·")[0].trim();
+  const dark = p.thumbType === "dark";
+
+  const Tag = href ? "a" : "div";
+  const linkProps = href ? { href } : {};
+
+  return (
+    <Tag
+      {...linkProps}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      style={{
+        display: "block",
+        textDecoration: "none",
+        color: "inherit",
+        cursor: href ? "pointer" : "default",
+        transform: hover ? "translateY(-6px)" : "translateY(0)",
+        transition: "transform 0.5s cubic-bezier(0.2,0.9,0.2,1)",
+      }}
+    >
+      <div
+        style={{
+          position: "relative",
+          aspectRatio: "4 / 3",
+          borderRadius: 18,
+          overflow: "hidden",
+          background: p.thumbBg,
+          boxShadow: hover
+            ? "0 36px 80px rgba(14,20,36,0.20), 0 8px 20px rgba(14,20,36,0.10)"
+            : "0 18px 50px rgba(14,20,36,0.12)",
+          transition: "box-shadow 0.5s ease",
+        }}
+      >
+        {p.thumbImgDark && p.thumbImgLight ? (
+          <>
+            <img src={p.thumbImgDark} alt="" style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"contain", objectPosition:"center center", clipPath:"polygon(0 0, 100% 0, 100% 36%, 0 64%)" }} />
+            <img src={p.thumbImgLight} alt="" style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"contain", objectPosition:"center center", clipPath:"polygon(0 64%, 100% 36%, 100% 100%, 0 100%)" }} />
+            <div style={{ position:"absolute", left:0, right:0, top:"calc(50% - 1px)", height:2, background:"rgba(255,255,255,0.18)", transform:"rotate(-15.5deg) scaleX(1.4)", pointerEvents:"none" }} />
+          </>
+        ) : p.thumbDevice === "ipad" && p.thumbImg ? (
+          <div style={{ position:"absolute", inset:"12% 8%", background:"#1C1C1E", borderRadius:16, overflow:"hidden", boxShadow:"0 0 0 2px #3A3A3A, 0 24px 48px rgba(0,0,0,0.35)" }}>
+            <img src={p.thumbImg} alt={p.title} style={{ width:"100%", height:"100%", objectFit:"cover", objectPosition:"center top" }} />
+          </div>
+        ) : p.thumbImg ? (
+          <img src={p.thumbImg} alt={p.title} style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit: p.thumbFit || "cover", objectPosition:"center" }} />
+        ) : (
+          <>
+            <div style={{ position:"absolute", right:-36, bottom:-70, fontFamily:'"Inter Tight", sans-serif', fontWeight:800, fontSize:340, lineHeight:0.8, color:p.accent, opacity:dark?0.5:0.22, letterSpacing:"-0.05em", transform:hover?"scale(1.04)":"scale(1)", transition:"transform 0.7s cubic-bezier(0.2,0.9,0.2,1)" }}>{p.title[0]}</div>
+            <div style={{ position:"absolute", left:32, top:32, width:96, height:96, borderRadius:"50%", background:p.accent }} />
+            <div style={{ position:"absolute", left:78, top:78, width:48, height:48, borderRadius:"50%", background:dark?"#fff":p.thumbBg, mixBlendMode:dark?"screen":"normal" }} />
+          </>
+        )}
+        <div
+          style={{
+            position: "absolute",
+            top: 22,
+            left: 24,
+            fontFamily: '"Inter Tight", sans-serif',
+            fontSize: 12,
+            letterSpacing: "0.16em",
+            color: dark ? "rgba(255,255,255,0.7)" : "rgba(10,14,26,0.55)",
+            fontVariantNumeric: "tabular-nums",
+          }}
+        >
+          {p.num} / 03
+        </div>
+        {href && (
+          <div
+            style={{
+              position: "absolute",
+              right: 22,
+              bottom: 22,
+              padding: "8px 16px",
+              borderRadius: 999,
+              background: p.accent,
+              color: "#fff",
+              fontFamily: '"Inter Tight", sans-serif',
+              fontSize: 12,
+              fontWeight: 600,
+              letterSpacing: "0.1em",
+              textTransform: "uppercase",
+              opacity: hover ? 1 : 0,
+              transform: hover ? "translateY(0)" : "translateY(8px)",
+              transition: "opacity 0.4s ease, transform 0.4s ease",
+            }}
+          >
+            Case study →
+          </div>
+        )}
+      </div>
+
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginTop: 22 }}>
+        <div
+          style={{
+            fontFamily: '"Inter Tight", sans-serif',
+            fontWeight: 700,
+            fontSize: 30,
+            letterSpacing: "-0.025em",
+            color: hover ? p.accent : "#0A0E1A",
+            transition: "color 0.3s ease",
+          }}
+        >
+          {p.title}
+        </div>
+        <div
+          style={{
+            fontSize: 12,
+            letterSpacing: "0.1em",
+            color: "rgba(10,14,26,0.5)",
+            fontVariantNumeric: "tabular-nums",
+            textTransform: "uppercase",
+          }}
+        >
+          {year}
+        </div>
+      </div>
+      <div style={{ fontSize: 13, letterSpacing: "0.06em", textTransform: "uppercase", color: "rgba(10,14,26,0.55)", marginTop: 6 }}>
+        {roleTitle}
+      </div>
+      <div style={{ fontSize: 15.5, lineHeight: 1.5, color: "rgba(10,14,26,0.72)", marginTop: 14, maxWidth: 520, textWrap: "pretty" }}>
+        {p.desc}
+      </div>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 18 }}>
+        {p.metrics.map((m) => (
+          <span
+            key={m}
+            style={{
+              padding: "6px 12px",
+              border: `1px solid ${p.accent}55`,
+              borderRadius: 999,
+              fontSize: 11.5,
+              color: p.accent,
+              fontFamily: '"Inter Tight", sans-serif',
+              letterSpacing: "0.03em",
+            }}
+          >
+            {m}
+          </span>
+        ))}
+      </div>
+    </Tag>
+  );
+};
+
+const ctaBtnPrimary = {
+  display: "inline-flex",
+  alignItems: "center",
+  padding: "14px 26px",
+  borderRadius: 999,
+  background: "#0A0E1A",
+  color: "#F2EEE6",
+  textDecoration: "none",
+  fontFamily: '"Inter Tight", sans-serif',
+  fontSize: 14,
+  fontWeight: 600,
+  letterSpacing: "0.04em",
+};
+const ctaBtnSecondary = {
+  display: "inline-flex",
+  alignItems: "center",
+  padding: "14px 26px",
+  borderRadius: 999,
+  background: "transparent",
+  border: "1px solid rgba(10,14,26,0.25)",
+  color: "#0A0E1A",
+  cursor: "pointer",
+  fontFamily: '"Inter Tight", sans-serif',
+  fontSize: 14,
+  fontWeight: 600,
+  letterSpacing: "0.04em",
+};
+
+const PortfolioView = ({ onNavigate }) => (
+  <div style={{ minHeight: "100%", background: "#F2EEE6", color: "#0A0E1A", fontFamily: '"Inter Tight", system-ui, sans-serif' }}>
+    <GlobalNav active="portfolio" onNavigate={onNavigate} />
+
+    <section style={{ padding: "76px 48px 8px" }}>
+      <div
+        style={{
+          fontSize: 11,
+          letterSpacing: "0.18em",
+          textTransform: "uppercase",
+          color: "rgba(10,14,26,0.5)",
+          marginBottom: 24,
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+        }}
+      >
+        <span style={{ display: "inline-block", width: 28, height: 1, background: "rgba(10,14,26,0.4)" }} />
+        Selected work 
+      </div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: 40, flexWrap: "wrap" }}>
+        <h1 style={{ fontWeight: 700, fontSize: "clamp(56px, 8vw, 120px)", letterSpacing: "-0.045em", lineHeight: 0.9, margin: 0 }}>
+          Portfolio<span style={{ color: "#FF5C2A" }}>.</span>
+        </h1>
+        <p style={{ maxWidth: 340, fontSize: 15.5, lineHeight: 1.55, color: "rgba(10,14,26,0.7)", margin: 0, textWrap: "pretty" }}>
+          A design system. A tablet redesign. A feature discovery pipeline. Three projects, shipped.
+        </p>
+      </div>
+    </section>
+
+    <section style={{ padding: "56px 48px 70px" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(440px, 1fr))", gap: "72px 56px" }}>
+        {PROJECTS_V2.map((p, i) => (
+          <PortfolioCard key={p.id} p={p} idx={i} />
+        ))}
+      </div>
+    </section>
+
+    <section
+      style={{
+        padding: "60px 48px 90px",
+        borderTop: "1px solid rgba(10,14,26,0.12)",
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        flexWrap: "wrap",
+        gap: 24,
+      }}
+    >
+      <div style={{ fontWeight: 700, fontSize: "clamp(30px, 4vw, 52px)", letterSpacing: "-0.03em" }}>
+        Want the full story?
+      </div>
+      <div style={{ display: "flex", gap: 16 }}>
+        <button type="button" onClick={() => onNavigate && onNavigate("resume")} style={ctaBtnSecondary}>
+          View resume
+        </button>
+        <a href="mailto:christinajdoolan@gmail.com" style={ctaBtnPrimary}>
+          Get in touch →
+        </a>
+      </div>
+    </section>
+  </div>
+);
+
+/* ─── ResumeView ────────────────────────────────────────────────── */
+
+const RESUME_EXPERIENCE = [
+  {
+    num: "01",
+    company: "Moonware inc.",
+    location: "Santa Monica, CA",
+    role: "Lead UX/UI Designer",
+    dates: "May 2025 — Present",
+    current: true,
+    bullets: [
+      "Own end-to-end product design for an enterprise application across iOS, Android, and web, supporting airport operational workflows.",
+      "Architected a cross-platform design system using a two-layer semantic token model — a scalable foundation for consistent experiences across products and platforms.",
+      "Led client iPad app design, modernizing navigation and core workflows from field testing and usage data; supported deployment across additional Japan Airlines locations.",
+      "Drive design adoption in production through AI-assisted audits, coded interaction prototypes, and developer documentation.",
+      "Delivered workflow improvements projected to save $3.7M annually and reduce headcount by 5.6%.",
+      "Adapt designs for 3 languages (English, Japanese, Spanish), optimizing for character-dense scripts, text expansion, and font fallback.",
+      "Collaborate with stakeholders to translate client requirements into key features — billing, KPI tracking, and multi-photo capture.",
+    ],
+  },
+  {
+    num: "02",
+    company: "USC Marshall",
+    location: "Los Angeles, CA",
+    role: "Design & Marketing Specialist",
+    dates: "Dec 2022 — May 2025",
+    bullets: [
+      "Drove content strategy and iteration, increasing LinkedIn impressions by 487% and engagement by 596% through data-informed design decisions.",
+      "Collaborated cross-functionally to align design solutions with marketing and sales goals, ensuring a cohesive user experience across campaigns.",
+    ],
+  },
+  {
+    num: "03",
+    company: "Bluebeam Software",
+    location: "Pasadena, CA",
+    role: "UX & Graphic Design Intern",
+    dates: "Jun 2024 — Aug 2024",
+    bullets: [
+      "Redesigned customer training sites and videos, enhancing onboarding for Bluebeam's 3M subscribers using Figma, jQuery, and Adobe Premiere Pro.",
+      "Created 100+ thumbnails for live trainings, courses, and how-to guides — cohesive, on-brand visuals with clear differentiation for intuitive navigation.",
+    ],
+  },
+  {
+    num: "04",
+    company: "Ravinia College Consulting",
+    location: "Virtual, USA",
+    role: "UX & Brand Designer",
+    dates: "Aug 2023 — Jan 2024",
+    bullets: [
+      "Led a comprehensive redesign of the company website, improving usability and aligning the digital experience with user needs.",
+      "Developed the company logo and visual identity, establishing a cohesive brand across digital, marketing, and sales channels.",
+    ],
+  },
+];
+
+const RESUME_SKILLS = [
+  { group: "UX & Design", items: ["End-to-End Product Design", "Design Systems", "Interaction Design", "Information Architecture", "AI-Assisted Design Workflows", "Coded Prototyping"] },
+  { group: "Product & Management", items: ["Product Strategy", "Feature Prioritization", "Requirements Definition", "Cross-Functional Collaboration"] },
+  { group: "Tools", items: ["Figma", "Claude Code", "ChatGPT", "HTML / CSS"] },
+  { group: "Languages", items: ["Spanish (proficient)"] },
+];
+
+const ExperienceEntry = ({ e }) => {
+  const [hover, setHover] = React.useState(false);
+  return (
+    <div
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      style={{
+        display: "grid",
+        gridTemplateColumns: "56px 1fr",
+        gap: 24,
+        padding: "36px 0",
+        borderTop: "1px solid rgba(10,14,26,0.14)",
+      }}
+    >
+      <div
+        style={{
+          fontFamily: '"Instrument Serif", serif',
+          fontSize: 30,
+          fontStyle: "italic",
+          color: hover ? ACCENT : "rgba(10,14,26,0.35)",
+          lineHeight: 1,
+          transition: "color 0.3s ease",
+          fontVariantNumeric: "tabular-nums",
+        }}
+      >
+        {e.num}
+      </div>
+      <div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 20, flexWrap: "wrap" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <span style={{ fontWeight: 700, fontSize: 26, letterSpacing: "-0.02em" }}>{e.company}</span>
+            {e.current && (
+              <span
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 7,
+                  padding: "3px 10px",
+                  borderRadius: 999,
+                  background: "rgba(255,92,42,0.12)",
+                  color: ACCENT,
+                  fontSize: 11,
+                  fontWeight: 600,
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                }}
+              >
+                <span style={{ width: 6, height: 6, borderRadius: "50%", background: ACCENT }} />
+                Current
+              </span>
+            )}
+          </div>
+          <span
+            style={{
+              fontSize: 13,
+              letterSpacing: "0.06em",
+              color: "rgba(10,14,26,0.55)",
+              fontVariantNumeric: "tabular-nums",
+              textTransform: "uppercase",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {e.dates}
+          </span>
+        </div>
+        <div
+          style={{
+            marginTop: 6,
+            fontSize: 13,
+            letterSpacing: "0.1em",
+            textTransform: "uppercase",
+            color: ACCENT,
+            fontWeight: 600,
+          }}
+        >
+          {e.role} <span style={{ color: "rgba(10,14,26,0.4)", fontWeight: 500 }}>· {e.location}</span>
+        </div>
+        <ul style={{ margin: "20px 0 0", padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 12 }}>
+          {e.bullets.map((b, i) => (
+            <li key={i} style={{ display: "grid", gridTemplateColumns: "16px 1fr", gap: 12, alignItems: "start" }}>
+              <span style={{ color: ACCENT, fontSize: 16, lineHeight: 1.5 }}>—</span>
+              <span style={{ fontSize: 15.5, lineHeight: 1.55, color: "rgba(10,14,26,0.78)", textWrap: "pretty" }}>{b}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  );
+};
+
+const SideBlock = ({ label, children }) => (
+  <div style={{ marginBottom: 40 }}>
+    <div
+      style={{
+        fontSize: 11,
+        letterSpacing: "0.18em",
+        textTransform: "uppercase",
+        color: "rgba(10,14,26,0.5)",
+        marginBottom: 16,
+        paddingBottom: 10,
+        borderBottom: `1px solid ${ACCENT}`,
+      }}
+    >
+      {label}
+    </div>
+    {children}
+  </div>
+);
+
+const resumeLink = { color: "#0A0E1A", textDecoration: "none", borderBottom: `1px solid ${ACCENT}` };
+
+const ResumeView = ({ onNavigate }) => (
+  <div style={{ minHeight: "100%", background: "#F2EEE6", color: "#0A0E1A", fontFamily: '"Inter Tight", system-ui, sans-serif' }}>
+    <GlobalNav active="resume" onNavigate={onNavigate} />
+
+    <div style={{ maxWidth: 1180, margin: "0 auto", padding: "64px 48px 110px" }}>
+      <header
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1.5fr 1fr",
+          gap: 48,
+          alignItems: "end",
+          paddingBottom: 40,
+          borderBottom: "2px solid #0A0E1A",
+        }}
+      >
+        <div>
+          <div
+            style={{
+              fontSize: 11,
+              letterSpacing: "0.18em",
+              textTransform: "uppercase",
+              color: "rgba(10,14,26,0.5)",
+              marginBottom: 18,
+            }}
+          >
+            Résumé · 2026
+          </div>
+          <h1
+            style={{
+              margin: 0,
+              fontWeight: 700,
+              fontSize: "clamp(48px, 6.5vw, 92px)",
+              letterSpacing: "-0.045em",
+              lineHeight: 0.92,
+            }}
+          >
+            Christina<br />
+            Doolan<span style={{ color: ACCENT }}>.</span>
+          </h1>
+          <div
+            style={{
+              marginTop: 18,
+              fontFamily: '"Instrument Serif", serif',
+              fontStyle: "italic",
+              fontSize: 26,
+              color: "rgba(10,14,26,0.7)",
+            }}
+          >
+            Product Designer · UX/UI Designer
+          </div>
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 18 }}>
+          <a
+            href="images/CDoolan-Resume.pdf"
+            download="CDoolan-Resume.pdf"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 10,
+              padding: "14px 24px",
+              borderRadius: 999,
+              background: "#0A0E1A",
+              color: "#F2EEE6",
+              textDecoration: "none",
+              fontSize: 14,
+              fontWeight: 600,
+              letterSpacing: "0.04em",
+            }}
+          >
+            ↓ Download PDF
+          </a>
+          <div style={{ fontSize: 14.5, lineHeight: 1.7, color: "rgba(10,14,26,0.75)" }}>
+            <a href="mailto:christinajdoolan@gmail.com" style={resumeLink}>christinajdoolan@gmail.com</a><br />
+            <span style={{ fontVariantNumeric: "tabular-nums" }}>(303) 817-4341</span><br />
+            <a href="https://www.linkedin.com/in/christina-doolan-36b1a224a/" style={resumeLink}>linkedin.com/in/christina-doolan</a>
+          </div>
+        </div>
+      </header>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1.62fr 0.78fr", gap: 64, marginTop: 8 }}>
+        <main>
+          <div
+            style={{
+              fontSize: 11,
+              letterSpacing: "0.18em",
+              textTransform: "uppercase",
+              color: "rgba(10,14,26,0.5)",
+              margin: "44px 0 4px",
+            }}
+          >
+            Professional Experience
+          </div>
+          {RESUME_EXPERIENCE.map((e) => (
+            <ExperienceEntry key={e.num} e={e} />
+          ))}
+        </main>
+
+        <aside style={{ paddingTop: 44 }}>
+          <div style={{ position: "sticky", top: 96 }}>
+            <SideBlock label="Education">
+              <div style={{ fontWeight: 700, fontSize: 18, letterSpacing: "-0.01em" }}>
+                University of Southern California
+              </div>
+              <div style={{ fontSize: 15, color: "rgba(10,14,26,0.75)", marginTop: 6, lineHeight: 1.5 }}>
+                BA Cognitive Science
+              </div>
+              <div style={{ fontSize: 14, color: "rgba(10,14,26,0.6)", marginTop: 6, lineHeight: 1.5 }}>
+                Minors in Communication Design &amp; Web Development
+              </div>
+              <div
+                style={{
+                  marginTop: 12,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 8,
+                  fontFamily: '"Instrument Serif", serif',
+                  fontStyle: "italic",
+                  fontSize: 18,
+                  color: ACCENT,
+                }}
+              >
+                Summa Cum Laude · GPA 3.97
+              </div>
+            </SideBlock>
+
+            {RESUME_SKILLS.map((s) => (
+              <SideBlock key={s.group} label={s.group}>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                  {s.items.map((it) => (
+                    <span
+                      key={it}
+                      style={{
+                        padding: "6px 12px",
+                        borderRadius: 999,
+                        border: "1px solid rgba(10,14,26,0.18)",
+                        fontSize: 12.5,
+                        color: "rgba(10,14,26,0.78)",
+                        letterSpacing: "0.02em",
+                      }}
+                    >
+                      {it}
+                    </span>
+                  ))}
+                </div>
+              </SideBlock>
+            ))}
+
+            <button
+              type="button"
+              onClick={() => onNavigate && onNavigate("portfolio")}
+              style={{
+                appearance: "none",
+                border: "1px solid rgba(10,14,26,0.25)",
+                background: "transparent",
+                cursor: "pointer",
+                width: "100%",
+                padding: "14px 20px",
+                borderRadius: 12,
+                fontFamily: '"Inter Tight", sans-serif',
+                fontSize: 14,
+                fontWeight: 600,
+                letterSpacing: "0.04em",
+                color: "#0A0E1A",
+                textAlign: "left",
+              }}
+            >
+              See the work →
+            </button>
+          </div>
+        </aside>
+      </div>
+    </div>
+  </div>
+);
+
+/* ─── PortfolioApp ──────────────────────────────────────────────── */
+
+const PortfolioApp = () => {
+  const initialTab = new URLSearchParams(window.location.search).get("tab") || "home";
+  const [tab, setTab] = React.useState(initialTab);
+  const scrollRef = React.useRef(null);
+
+  const navigate = (t) => {
+    setTab(t);
+    if (scrollRef.current) scrollRef.current.scrollTop = 0;
+  };
+
+  React.useEffect(() => {
+    if (scrollRef.current) scrollRef.current.scrollTop = 0;
+  }, [tab]);
+
+  return (
+    <div style={{ height: "100vh", display: "flex", flexDirection: "column", background: "#F2EEE6" }}>
+      <main
+        ref={scrollRef}
+        style={{ flex: 1, overflowY: "auto", overflowX: "hidden", position: "relative" }}
+      >
+        {tab === "home"      && <HomepageKineticV2 onNavigate={navigate} />}
+        {tab === "portfolio" && <PortfolioView     onNavigate={navigate} />}
+        {tab === "resume"    && <ResumeView        onNavigate={navigate} />}
+      </main>
+    </div>
+  );
+};
+
+ReactDOM.createRoot(document.getElementById("root")).render(<PortfolioApp />);
+
+    </script>
+  </body>
+</html>

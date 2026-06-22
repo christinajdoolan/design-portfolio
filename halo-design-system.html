@@ -1,0 +1,1256 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Christina Doolan — HALO Cross-Platform Design System</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter+Tight:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+      html { scroll-behavior: smooth; }
+      html, body {
+        background: #F2EEE6;
+        font-family: "Inter Tight", system-ui, sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+      a { color: inherit; text-decoration: none; }
+      ::-webkit-scrollbar { width: 10px; }
+      ::-webkit-scrollbar-track { background: #E8E2D4; }
+      ::-webkit-scrollbar-thumb { background: rgba(10,14,26,0.2); border-radius: 5px; }
+      #root { width: 100%; }
+    </style>
+
+    <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" crossorigin="anonymous"></script>
+    <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" crossorigin="anonymous"></script>
+    <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+      const { useState, useEffect, useRef, Fragment } = React;
+
+      /* ─── DESIGN TOKENS ──────────────────────────────────────────────── */
+      const C = {
+        bg:        "#F2EEE6",
+        card:      "#FFFFFF",
+        ink:       "#0A0E1A",
+        ink2:      "rgba(10,14,26,0.7)",
+        ink3:      "rgba(10,14,26,0.5)",
+        rule:      "rgba(10,14,26,0.12)",
+        coral:     "#1779DA",
+        coralSoft: "#DCEEFF",
+        slateE:    "#181D29",
+        slateD:    "#1F283A",
+        slateC:    "#2B3851",
+        grey100:   "#FAFAFA",
+        grey300:   "#E4E9EE",
+        grey500:   "#C7D0D7",
+      };
+      const sans  = '"Inter Tight", system-ui, sans-serif';
+      const serif = '"Instrument Serif", "Times New Roman", serif';
+      const mono  = '"JetBrains Mono", ui-monospace, monospace';
+
+      /* ─── ORB V2 ─────────────────────────────────────────────────────── */
+      const OrbV2 = ({ containerRef, themeColor = "#1779DA", scrollProgress = 0 }) => {
+        const orbRef     = useRef(null);
+        const rafRef     = useRef(null);
+        const targetRef  = useRef({ x: 0.5, y: 0.5 });
+        const currentRef = useRef({ x: 0.5, y: 0.4 });
+        const tRef       = useRef(0);
+
+        useEffect(() => {
+          const el = orbRef.current;
+          if (!el) return;
+          const container = containerRef?.current || el.parentElement;
+          const onMove = (e) => {
+            if (!container) return;
+            const r = container.getBoundingClientRect();
+            targetRef.current = {
+              x: Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)),
+              y: Math.max(0, Math.min(1, (e.clientY - r.top)  / r.height)),
+            };
+          };
+          const tick = () => {
+            tRef.current += 0.005;
+            const t   = tRef.current;
+            const driftX = 0.5 + Math.sin(t * 0.6) * 0.18;
+            const driftY = 0.4 + Math.cos(t * 0.5) * 0.14;
+            const blend  = 0.4;
+            const tx = driftX * (1 - blend) + targetRef.current.x * blend;
+            const ty = driftY * (1 - blend) + targetRef.current.y * blend;
+            const ease = 0.05;
+            currentRef.current.x += (tx - currentRef.current.x) * ease;
+            currentRef.current.y += (ty - currentRef.current.y) * ease;
+            const cx = currentRef.current.x * 100;
+            const cy = currentRef.current.y * 100;
+            el.style.transform = `translate3d(${cx - 50}%, ${cy - 50}%, 0) rotate(${Math.sin(t * 0.3) * 12}deg)`;
+            rafRef.current = requestAnimationFrame(tick);
+          };
+          if (container) container.addEventListener("mousemove", onMove);
+          rafRef.current = requestAnimationFrame(tick);
+          return () => {
+            cancelAnimationFrame(rafRef.current);
+            if (container) container.removeEventListener("mousemove", onMove);
+          };
+        }, [containerRef]);
+
+        const gradient = `radial-gradient(circle at 30% 30%, #C7DBFF 0%, ${themeColor} 40%, #0D4A8A 70%, #0A1628 100%)`;
+        const size = 600 + scrollProgress * 200;
+        return (
+          <div ref={orbRef} style={{ position: "absolute", left: "50%", top: "50%", width: size, height: size, marginLeft: -size / 2, marginTop: -size / 2, borderRadius: "50%", background: gradient, filter: "blur(40px) saturate(1.15)", opacity: 0.63, pointerEvents: "none", willChange: "transform, background", mixBlendMode: "multiply", transition: "background 1.2s ease, width 1s ease, height 1s ease, margin 1s ease" }} />
+        );
+      };
+
+      /* ─── COLOR CURSOR ───────────────────────────────────────────────── */
+      const ColorCursor = ({ containerRef }) => {
+        const [pos,     setPos]     = useState({ x: -200, y: -200 });
+        const [variant, setVariant] = useState("default");
+        const [visible, setVisible] = useState(false);
+
+        useEffect(() => {
+          const el = containerRef?.current;
+          if (!el) return;
+          const onMove = (e) => {
+            const r = el.getBoundingClientRect();
+            setPos({ x: e.clientX - r.left, y: e.clientY - r.top });
+            setVisible(true);
+            let t = e.target; let v = "default";
+            while (t && t !== el) {
+              if (t.dataset?.cursor) { v = t.dataset.cursor; break; }
+              t = t.parentElement;
+            }
+            setVariant(v);
+          };
+          const onLeave = () => setVisible(false);
+          el.addEventListener("mousemove", onMove);
+          el.addEventListener("mouseleave", onLeave);
+          return () => { el.removeEventListener("mousemove", onMove); el.removeEventListener("mouseleave", onLeave); };
+        }, [containerRef]);
+
+        const variants = {
+          default: { size: 16, color: C.coral,    blend: "normal",    label: null },
+          footer:  { size: 60, color: C.coral,    blend: "normal",    label: "✶" },
+          link:    { size: 36, color: C.coral,    blend: "normal",    label: null },
+        };
+        const v = variants[variant] || variants.default;
+        return (
+          <div style={{ position: "fixed", left: pos.x, top: pos.y, width: v.size, height: v.size, marginLeft: -v.size / 2, marginTop: -v.size / 2, borderRadius: "50%", background: v.color, mixBlendMode: v.blend, pointerEvents: "none", zIndex: 9999, transition: "width .25s cubic-bezier(.2,.9,.2,1), height .25s cubic-bezier(.2,.9,.2,1), margin .25s cubic-bezier(.2,.9,.2,1), background .25s, opacity .2s", opacity: visible ? 1 : 0, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontFamily: sans, fontSize: 11, fontWeight: 600, letterSpacing: "0.14em", textTransform: "uppercase" }}>
+            {v.label}
+          </div>
+        );
+      };
+
+      /* ─── PRIMITIVES ─────────────────────────────────────────────────── */
+      const I = ({ children }) => <span style={{ fontFamily: serif, fontStyle: "italic", fontWeight: 400 }}>{children}</span>;
+
+      const Label = ({ children, color = C.coral }) => (
+        <div style={{ fontFamily: sans, fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase", color, fontWeight: 600, marginBottom: 14 }}>{children}</div>
+      );
+
+      const STitle = ({ children, size = 56 }) => (
+        <h2 style={{ fontFamily: sans, fontWeight: 600, fontSize: size, lineHeight: 1.02, letterSpacing: "-0.03em", color: C.ink, margin: 0 }}>{children}</h2>
+      );
+
+      const Body = ({ children, size = 17, color = C.ink2 }) => (
+        <p style={{ fontFamily: sans, fontSize: size, lineHeight: 1.6, color, margin: "0 0 16px" }}>{children}</p>
+      );
+
+      const Rule = () => <div style={{ height: 1, background: C.rule }} />;
+
+      const TwoCol = ({ left, right }) => (
+        <div style={{ display: "grid", gridTemplateColumns: "35fr 60fr", gap: 80 }}>
+          <div>{left}</div>
+          <div>{right}</div>
+        </div>
+      );
+
+      /* ─── TOKEN DATA ─────────────────────────────────────────────────── */
+      const BRAND_SCALES = [
+        { name: "Red",    note: "Critical, alert, error",  stops: [["100","#FDEBEC"],["200","#F8C9CE"],["300","#F09AA2"],["400","#E56A77"],["500","#CC3E52"],["600","#A82F41"],["700","#7C2330"],["800","#561822"],["900","#2E0E15"]] },
+        { name: "Yellow", note: "Warning, caution",        stops: [["100","#FFFBEA"],["200","#FFF3C4"],["300","#FFE58F"],["400","#FACC55"],["500","#E0AE0F"],["600","#B98C0A"],["700","#946D08"],["800","#5E4B02"],["900","#2A2404"]] },
+        { name: "Green",  note: "Positive, success",       stops: [["100","#E6F4EF"],["200","#C1E4D6"],["300","#97D1BC"],["400","#6ABF9F"],["500","#46AD85"],["600","#358A6B"],["700","#296C56"],["800","#205141"],["900","#173C32"]] },
+        { name: "Blue",   note: "Info, link, system",      stops: [["100","#E6F2FC"],["200","#BFDFF9"],["300","#8AC3F2"],["400","#4DA4EB"],["500","#1779DA"],["600","#1469C0"],["700","#17579E"],["800","#1C467C"],["900","#1A345C"]] },
+      ];
+
+      const BRAND_NEUTRALS = [
+        { name: "HALO-Grey",  note: "Content & surfaces",         stops: [["100","#FAFAFA"],["200","#E9EDF1"],["300","#E4E9EE"],["400","#DCE1E6"],["500","#C7D0D7"],["600","#B4BEC8"],["700","#808991"],["800","#475161"],["900","#2A3140"]] },
+        { name: "HALO-Slate", note: "Content & surfaces", stops: [["A","#3A4258"],["B","#2E3748"],["C","#2B3851"],["D","#1F283A"],["E","#181D29"],["F","#141620"],["G","#0F1017"],["H","#07080B"]] },
+      ];
+
+      const SEMANTIC_GROUPS = [
+        { name: "Surface", count: 20, rows: [
+          ["primary",               "HALO-Slate/D", "#1F283A",  "HALO-Grey/100",  "#FAFAFA"],
+          ["secondary",             "HALO-Slate/C", "#2B3851",  "HALO-Grey/300",  "#E4E9EE"],
+          ["tertiary",              "HALO-Slate/B", "#2E3748",  "HALO-Grey/200",  "#E9EDF1"],
+          ["invert-static",         "HALO-Grey/400","#DCE1E6",  "HALO-Grey/400",  "#DCE1E6"],
+          ["bottom-sheet-primary",  "HALO-Slate/E", "#181D29",  "HALO-Grey/500",  "#C7D0D7"],
+          ["nav-bar",               "HALO-Slate/E", "#181D29",  "HALO-Slate/E",   "#181D29"],
+          ["critical",              "Red/800",       "#561822",  "Red/300",        "#F09AA2"],
+          ["warning",               "Yellow/800",    "#5E4B02",  "Yellow/200",     "#FFF3C4"],
+          ["positive",              "Green/800",     "#205141",  "Green/200",      "#C1E4D6"],
+          ["info",                  "Blue/800",      "#1C467C",  "Blue/300",       "#8AC3F2"],
+          ["chat",                  "HALO-Slate/C",  "#2B3851",  "HALO-Slate/C",   "#2B3851"],
+        ]},
+        { name: "Content", count: 21, rows: [
+          ["primary",    "HALO-Grey/100", "#FAFAFA",  "HALO-Slate/E", "#181D29"],
+          ["secondary",  "HALO-Grey/500", "#C7D0D7",  "HALO-Slate/D", "#1F283A"],
+          ["tertiary",   "HALO-Grey/700", "#808991",  "HALO-Slate/C", "#2B3851"],
+          ["invert",     "HALO-Slate/E",  "#181D29",  "HALO-Grey/100","#FAFAFA"],
+          ["on-critical","HALO-Grey/100", "#FAFAFA",  "HALO-Grey/100","#FAFAFA"],
+          ["on-warning", "HALO-Slate/E",  "#181D29",  "HALO-Slate/E", "#181D29"],
+          ["link",       "Blue/300",      "#8AC3F2",  "Blue/700",     "#17579E"],
+        ]},
+        { name: "Border", count: 6, rows: [
+          ["default",  "HALO-Slate/B","#2E3748", "HALO-Grey/400","#DCE1E6"],
+          ["strong",   "HALO-Slate/A","#3A4258", "HALO-Grey/500","#C7D0D7"],
+          ["critical", "Red/600",     "#A82F41", "Red/500",      "#CC3E52"],
+          ["focus",    "Blue/400",    "#4DA4EB", "Blue/500",     "#1779DA"],
+        ]},
+      ];
+
+      const SPACE_ROWS_SPACE = [
+        ["100","micro",2], ["300","inline",8],
+        ["400","sub-group",12], ["500","group",16],
+        ["600","related",24], ["800","section",40],
+      ];
+      const SPACE_ROWS_PADDING = [
+        ["100","micro",2], ["200","",4],
+        ["300","tight",8], ["400","",12],
+        ["500","",16], ["600","",24],
+      ];
+      const SPACE_PLATFORMS = {
+        phone: [
+          { group: "space", rows: SPACE_ROWS_SPACE },
+          { group: "screen-padding", rows: [
+            ["page","",16], ["side-sheet","",24],
+            ["safe-area","",40], ["btn-text","",49],
+            ["bottom-btn","",80],
+          ]},
+          { group: "padding", rows: SPACE_ROWS_PADDING },
+        ],
+        ipad: [
+          { group: "space", rows: SPACE_ROWS_SPACE },
+          { group: "screen-padding", rows: [
+            ["page","",20], ["side-sheet","",24],
+            ["safe-area","",40], ["btn-text","",49],
+            ["bottom-btn","",32],
+          ]},
+          { group: "padding", rows: SPACE_ROWS_PADDING },
+        ],
+        web: [
+          { group: "space", rows: [
+            ["100","micro",2], ["300","inline",4],
+            ["400","sub-group",8], ["500","group",12],
+            ["600","related",16], ["800","section",40],
+          ]},
+          { group: "screen-padding", rows: [
+            ["page","",16], ["side-sheet","",24],
+            ["safe-area","",40], ["btn-text","",49],
+            ["bottom-btn","",32],
+          ]},
+          { group: "padding", rows: SPACE_ROWS_PADDING },
+        ],
+      };
+
+      const TYPE_FONT_FAMILY = [["Regular","Inter"],["Small","Inter"],["Large","Inter"]];
+
+      const TYPE_SCALE = [
+        ["400", 12,10,14, 20,16,24],
+        ["500", 14,12,16, 22,16,24],
+        ["600", 16,14,18, 24,20,28],
+        ["700", 18,16,20, 28,24,31],
+        ["900", 20,18,22, 32,28,32],
+      ];
+
+      const TYPE_WEIGHTS = [
+        ["100",100,"Thin"],["200",200,"ExtraLight"],["300",300,"Light"],
+        ["400",400,"Regular"],["500",500,"Medium"],["600",600,"SemiBold"],
+        ["700",700,"Bold"],["800",800,"ExtraBold"],["900",900,"Black"],
+      ];
+
+      /* ─── STICKY NAV ─────────────────────────────────────────────────── */
+      const NAV_TABS = [["home","Home"],["portfolio","Portfolio"],["resume","Resume"]];
+      const navResetBtn = { appearance:"none", border:"none", background:"transparent", cursor:"pointer", fontFamily:'"Inter Tight", system-ui, sans-serif', padding:0, margin:0 };
+      const GlobalNav = ({ active, onNavigate, accent = "#FF5C2A" }) => {
+        return (
+          <div style={{ position:"sticky", top:0, zIndex:50, padding:"20px 48px", display:"flex", justifyContent:"space-between", alignItems:"center", background:"rgba(242,238,230,0.74)", backdropFilter:"blur(14px) saturate(1.4)", WebkitBackdropFilter:"blur(14px) saturate(1.4)", borderBottom:"1px solid rgba(10,14,26,0.08)" }}>
+            <button type="button" onClick={() => onNavigate && onNavigate("home")} style={{ ...navResetBtn, display:"flex", alignItems:"center", color:"#0A0E1A" }}>
+              <div style={{ width:32, height:32, borderRadius:8, background:"#0A0E1A", color:"#fff", display:"flex", alignItems:"center", justifyContent:"center", fontSize:14, marginRight:10, flexShrink:0 }}>◆</div>
+              <div style={{ textAlign:"left" }}>
+                <div style={{ fontSize:13, fontWeight:700, letterSpacing:"0.04em", textTransform:"uppercase" }}>Christina Doolan</div>
+                <div style={{ fontSize:10, letterSpacing:"0.14em", textTransform:"uppercase", color:"rgba(10,14,26,0.5)", fontWeight:500 }}>UX/UI Designer</div>
+              </div>
+            </button>
+            <div style={{ display:"flex", gap:6, alignItems:"center" }}>
+              {NAV_TABS.map(([id, label]) => {
+                const isActive = active === id;
+                return (
+                  <button key={id} type="button" onClick={() => onNavigate && onNavigate(id)} style={{ ...navResetBtn, position:"relative", display:"inline-flex", alignItems:"center", whiteSpace:"nowrap", padding:"8px 14px", fontSize:12, letterSpacing:"0.12em", textTransform:"uppercase", color: isActive ? "#0A0E1A" : "rgba(10,14,26,0.5)", fontWeight: isActive ? 600 : 500, transition:"color 0.25s ease" }}>
+                    {isActive && <span style={{ display:"inline-block", width:6, height:6, borderRadius:"50%", background:accent, marginRight:9, flexShrink:0 }} />}
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        );
+      };
+
+      /* ─── HERO ───────────────────────────────────────────────────────── */
+      const Hero = ({ containerRef }) => (
+        <section style={{ position: "relative", padding: "60px 64px 100px", minHeight: 920, overflow: "hidden" }}>
+          <div style={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
+            <OrbV2 containerRef={containerRef} themeColor="#1779DA" scrollProgress={0} />
+          </div>
+          <div style={{ position: "relative", zIndex: 2, textAlign: "center", paddingTop: 80 }}>
+            <span style={{ display: "inline-block", padding: "8px 18px", border: `1px solid ${C.ink}`, borderRadius: 999, fontFamily: sans, fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase", color: C.ink, marginBottom: 36 }}>
+              Tokens · Components · Cross-platform
+            </span>
+            <h1 style={{ fontFamily: sans, fontWeight: 700, fontSize: "clamp(56px, 6.4vw, 92px)", lineHeight: 0.98, letterSpacing: "-0.04em", color: C.ink, maxWidth: 1100, margin: "0 auto 20px", textWrap: "balance" }}>
+              One system. <I>Three</I> platforms. <I>Three</I> languages. <I>Two</I> color modes.
+            </h1>
+            
+          </div>
+
+          {/* Floating token cards */}
+          <div style={{ position: "relative", zIndex: 2, marginTop: 100, height: 320, display: "flex", justifyContent: "center", gap: 14, alignItems: "center", flexWrap: "wrap" }}>
+            {[
+              { tier: "Brand",    name: "Red/800",          val: "#561822",              swatch: "#561822",   rot: -6 },
+              { tier: "Semantic", name: "surface.critical",  val: "→ Red/800 · dark",     swatch: "#561822",   rot:  3 },
+              { tier: "Semantic", name: "surface.primary",   val: "→ HALO-Slate/D",       swatch: C.slateD,    rot: -2 },
+              { tier: "Brand",    name: "HALO-Grey/100",     val: "#FAFAFA",              swatch: C.grey100,   rot:  5 },
+              { tier: "Semantic", name: "content.primary",   val: "→ HALO-Slate/E · light",swatch: C.slateE,   rot: -4 },
+              { tier: "Brand",    name: "Green/800",         val: "#205141",              swatch: "#205141",   rot:  2 },
+            ].map((t, i) => (
+              <div key={i} style={{ background: "#fff", borderRadius: 14, padding: 18, width: 248, boxShadow: "0 6px 22px rgba(10,14,26,0.08)", transform: `rotate(${t.rot}deg)`, border: `1px solid ${C.rule}` }}>
+                <div style={{ fontFamily: sans, fontSize: 9, letterSpacing: "0.18em", textTransform: "uppercase", color: t.tier === "Brand" ? C.coral : "#3F7BA4", fontWeight: 700, marginBottom: 8 }}>{t.tier} token</div>
+                <div style={{ fontFamily: mono, fontSize: 12, color: C.ink, fontWeight: 600, marginBottom: 10 }}>{t.name}</div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <div style={{ width: 22, height: 22, borderRadius: 6, background: t.swatch, border: `1px solid ${C.rule}` }} />
+                  <div style={{ fontFamily: mono, fontSize: 11, color: C.ink2 }}>{t.val}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      );
+
+      /* ─── OVERVIEW ───────────────────────────────────────────────────── */
+      const Overview = () => (
+        <section style={{ padding: "120px 64px", maxWidth: 1280, margin: "0 auto" }}>
+          <TwoCol
+            left={<STitle>The systems <I>problem</I></STitle>}
+            right={<>
+              <Body size={19}>Moonwave shipped on iOS, Android, and web — and three different teams were quietly maintaining three different versions of every component, color, and font. Style drifted across platforms with no parity. Every translation broke a layout somewhere. Light mode was a wishlist item that kept getting backlogged.</Body>
+              <Body size={19}>I architected a two-layer semantic token system to absorb all of it: brand tokens at the bottom, semantic tokens above, and components downstream of both. Every platform pulled from the same source of truth. Light mode shipped without a fork. And translation stopped being a liability.</Body>
+            </>}
+          />
+          <div style={{ height: 80 }} />
+          <Rule />
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 40, padding: "40px 0" }}>
+            {[["Tokens","500+"],["Components","100+"],["Layers","2"],["Adopted by","10 engineers"]].map(([k, v]) => (
+              <div key={k}>
+                <Label>{k}</Label>
+                <div style={{ fontFamily: sans, fontSize: 28, color: C.ink, fontWeight: 600, letterSpacing: "-0.02em" }}>{v}</div>
+              </div>
+            ))}
+          </div>
+          <Rule />
+        </section>
+      );
+
+      /* ─── ARCHITECTURE ───────────────────────────────────────────────── */
+      const Architecture = () => (
+        <section style={{ padding: "60px 64px 60px", maxWidth: 1280, margin: "0 auto" }}>
+          <div style={{ marginBottom: 60 }}>
+            <Label>Architecture</Label>
+            <STitle size={48}>Two layers, <I>one</I> source of truth</STitle>
+            <div style={{ maxWidth: 720, marginTop: 16 }}>
+              <Body size={17}>Brand tokens describe what something <em>is</em> — our slate, red, yellow, green, and blue scales. Semantic tokens describe what something <em>does</em> — alert background, body text, nav surface. Components only ever reach into semantic tokens, never brand directly. That single rule is what lets a new light mode ship as a swap instead of a rebuild.</Body>
+            </div>
+          </div>
+
+          <div style={{ background: C.card, borderRadius: 18, padding: "48px 40px", boxShadow: "0 2px 12px rgba(0,0,0,0.06)" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "200px 1fr", gap: 40, alignItems: "stretch" }}>
+              {/* Layer labels */}
+              <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-around", gap: 24 }}>
+                {[
+                  ["02","Semantic","#3F7BA4","Carries dark + light source. Names what the value does."],
+                  ["01","Brand",   C.coral,  "Raw scales. The hex values themselves."],
+                ].map(([n, label, color, sub]) => (
+                  <div key={label} style={{ borderLeft: `3px solid ${color}`, paddingLeft: 16, paddingTop: 8, paddingBottom: 8 }}>
+                    <div style={{ fontFamily: sans, fontSize: 10, letterSpacing: "0.18em", color: C.ink3, fontWeight: 600 }}>LAYER {n}</div>
+                    <div style={{ fontFamily: serif, fontStyle: "italic", fontSize: 30, color, marginTop: 4 }}>{label}</div>
+                    <div style={{ fontFamily: sans, fontSize: 12, color: C.ink2, marginTop: 8, lineHeight: 1.5 }}>{sub}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Token graph */}
+              <div style={{ display: "grid", gridTemplateRows: "1fr 1fr", gap: 22 }}>
+                {/* Semantic row */}
+                <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignContent: "flex-start" }}>
+                  {[
+                    ["surface.primary",  C.slateD,  C.grey100],
+                    ["surface.critical", "#561822",  "#F09AA2"],
+                    ["surface.warning",  "#5E4B02",  "#FFF3C4"],
+                    ["content.primary",  C.grey100,  C.slateE],
+                    ["content.link",     "#8AC3F2",  "#17579E"],
+                    ["border.focus",     "#4DA4EB",  "#1779DA"],
+                  ].map(([name, dark, light]) => (
+                    <div key={name} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", border: `1px solid ${C.rule}`, borderRadius: 8, background: "#fff" }}>
+                      <div style={{ display: "flex" }}>
+                        <div style={{ width: 12, height: 18, borderRadius: "4px 0 0 4px", background: dark }} />
+                        <div style={{ width: 12, height: 18, borderRadius: "0 4px 4px 0", background: light }} />
+                      </div>
+                      <div style={{ fontFamily: mono, fontSize: 11, color: C.ink }}>{name}</div>
+                    </div>
+                  ))}
+                </div>
+                {/* Brand row */}
+                <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignContent: "flex-start" }}>
+                  {[["Red/500","#CC3E52"],["Yellow/500","#E0AE0F"],["Green/500","#46AD85"],["Blue/500","#1779DA"],["HALO-Grey/100","#FAFAFA"],["HALO-Slate/D",C.slateD]].map(([name, hex]) => (
+                    <div key={name} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", border: `1px solid ${C.rule}`, borderRadius: 8, background: "#fafafa" }}>
+                      <div style={{ width: 18, height: 18, borderRadius: 4, background: hex, border: `1px solid ${C.rule}` }} />
+                      <div style={{ fontFamily: mono, fontSize: 11, color: C.ink }}>{name}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div style={{ marginTop: 40, paddingTop: 28, borderTop: `1px solid ${C.rule}`, display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 32 }}>
+              {[
+                ["Light mode is a swap.",  "Each semantic token carries two source values — one per mode. Components never need to know which is active."],
+                ["No platform drift.",     "Web, iOS, and Android pull the same semantic token names. Drift becomes a contract violation, not a habit."],
+                ["Built to extend.",       "A new accent or surface is a single change at the brand layer. Everything downstream inherits."],
+              ].map(([t, d]) => (
+                <div key={t}>
+                  <div style={{ fontFamily: serif, fontStyle: "italic", fontSize: 22, color: C.ink, marginBottom: 8 }}>{t}</div>
+                  <div style={{ fontFamily: sans, fontSize: 14, color: C.ink2, lineHeight: 1.55 }}>{d}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      );
+
+      /* ─── MODES ──────────────────────────────────────────────────────── */
+      const MODE_PAIRS = [
+        { label: "Map",           device: "iPad",   dark: "images/Map.png",                             light: "images/Map-LM.png" },
+        { label: "Events",        device: "Mobile", dark: "images/Events-(mobile).png",                 light: "images/Events(mobile).png" },
+        { label: "Chat",          device: "iPad",   dark: "images/Chat-1-1.png",                        light: "images/Chat-1-1-LM.png" },
+        { label: "Map turnaround",device: "Mobile", dark: "images/Map-turnaround-(Mobile).png",         light: "images/Map-turnaround-(Mobile)-LM.png" },
+        { label: "Task details",  device: "iPad",   dark: "images/task-details.png",                    light: "images/task+details-LM.png" },
+        { label: "Task queue",    device: "Mobile", dark: "images/TaskQueue(Mobile).png",               light: "images/Task-Queue-(Mobile)-LM.png" },
+      ];
+
+      const Modes = () => {
+        const [idx, setIdx] = useState(0);
+        const [fade, setFade] = useState(true);
+
+        useEffect(() => {
+          const timer = setInterval(() => {
+            setFade(false);
+            setTimeout(() => { setIdx(i => (i + 1) % MODE_PAIRS.length); setFade(true); }, 300);
+          }, 3500);
+          return () => clearInterval(timer);
+        }, []);
+
+        const goTo = (i) => { setFade(false); setTimeout(() => { setIdx(i); setFade(true); }, 300); };
+        const pair = MODE_PAIRS[idx];
+
+        return (
+          <section style={{ padding: "60px 64px 80px", maxWidth: 1280, margin: "0 auto" }}>
+            <div>
+              <Label>Color modes</Label>
+              <STitle size={48}>The product, <I>in both</I> modes.</STitle>
+            </div>
+            <div style={{ marginTop: 60 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, marginBottom: 12 }}>
+                {["Dark mode", "Light mode"].map((label) => (
+                  <div key={label} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <div style={{ fontFamily: sans, fontSize: 11, letterSpacing: "0.18em", color: C.ink3, fontWeight: 600, textTransform: "uppercase" }}>{label}</div>
+                    <div style={{ flex: 1, height: 1, background: C.rule }} />
+                  </div>
+                ))}
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, opacity: fade ? 1 : 0, transition: "opacity 0.3s ease" }}>
+                {[pair.dark, pair.light].map((src, si) => (
+                  <div key={si} style={{ background: "#EBEDF0", borderRadius: 18, overflow: "hidden", border: si === 1 ? `1px solid ${C.rule}` : "none", display: "flex", alignItems: "center", justifyContent: "center", height: 520 }}>
+                    <img
+                      src={src}
+                      alt={si === 0 ? `${pair.label} dark` : `${pair.label} light`}
+                      style={pair.device === 'iPad'
+                        ? { width: "100%", height: "auto", maxHeight: "100%", display: "block", objectFit: "contain" }
+                        : { height: "76%", width: "auto", display: "block" }
+                      }
+                    />
+                  </div>
+                ))}
+              </div>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 18 }}>
+                <div style={{ fontFamily: sans, fontSize: 12, color: C.ink3 }}>{pair.label} · {pair.device}</div>
+                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                  {MODE_PAIRS.map((_, i) => (
+                    <button key={i} onClick={() => goTo(i)} style={{ width: i === idx ? 20 : 8, height: 8, borderRadius: 999, border: "none", background: i === idx ? C.coral : C.rule, cursor: "pointer", transition: "width 0.3s ease, background 0.3s ease", padding: 0 }} />
+                  ))}
+                </div>
+              </div>
+            </div>
+          </section>
+        );
+      };
+
+      /* ─── BRAND COLOR LIBRARY ────────────────────────────────────────── */
+      const BrandLayer = () => (
+        <section style={{ padding: "60px 64px 80px", maxWidth: 1280, margin: "0 auto" }}>
+          <Label>Layer 01 · Brand</Label>
+          <STitle size={48}>The <I>color</I> library</STitle>
+          <div style={{ maxWidth: 720, marginTop: 16, marginBottom: 48 }}>
+            <Body>Four hue scales — Red, Yellow, Green, Blue — and two neutral systems (HALO-Grey and HALO-Slate). Every value in the product is one of these, or absent. Components never reach in here directly.</Body>
+          </div>
+          <div style={{ background: C.slateE, borderRadius: 18, padding: "44px 40px", color: "#fff" }}>
+            <div style={{ fontFamily: sans, fontWeight: 700, fontSize: 16, color: "#fff", marginBottom: 28 }}>Color library</div>
+
+            {BRAND_SCALES.map((scale) => (
+              <div key={scale.name} style={{ display: "grid", gridTemplateColumns: "120px 1fr", alignItems: "center", marginBottom: 18 }}>
+                <div>
+                  <div style={{ fontFamily: sans, fontSize: 14, color: "rgba(255,255,255,0.9)", fontWeight: 500 }}>{scale.name}</div>
+                  <div style={{ fontFamily: sans, fontSize: 10, color: "rgba(255,255,255,0.45)", marginTop: 2 }}>{scale.note}</div>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(9, 1fr)", gap: 8 }}>
+                  {scale.stops.map(([n, hex]) => (
+                    <div key={n} title={hex} style={{ background: hex, aspectRatio: "1 / 1", borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: sans, fontSize: 11, fontWeight: 700, color: parseInt(n) <= 400 ? "#1a1a1a" : "#fff" }}>{n}</div>
+                  ))}
+                </div>
+              </div>
+            ))}
+
+            <div style={{ height: 28 }} />
+
+            {BRAND_NEUTRALS.map((scale) => (
+              <div key={scale.name} style={{ display: "grid", gridTemplateColumns: "120px 1fr", alignItems: "center", marginBottom: 18 }}>
+                <div>
+                  <div style={{ fontFamily: sans, fontSize: 14, color: "rgba(255,255,255,0.9)", fontWeight: 500 }}>{scale.name}</div>
+                  <div style={{ fontFamily: sans, fontSize: 10, color: "rgba(255,255,255,0.45)", marginTop: 2 }}>{scale.note}</div>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: `repeat(${scale.stops.length}, 1fr)`, gap: 8 }}>
+                  {scale.stops.map(([n, hex]) => {
+                    const isLight = scale.name === "HALO-Grey" ? parseInt(n) <= 500 : false;
+                    return (
+                      <div key={n} title={hex} style={{ background: hex, aspectRatio: "1 / 1", borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: sans, fontSize: 11, fontWeight: 700, color: isLight ? "#1a1a1a" : "#fff" }}>{n}</div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      );
+
+      /* ─── SEMANTIC LAYER ─────────────────────────────────────────────── */
+      const Swatch = ({ ref_, hex }) => (
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ width: 18, height: 18, borderRadius: 4, background: hex, border: `1px solid ${C.rule}`, flexShrink: 0 }} />
+          <span style={{ fontFamily: mono, fontSize: 12, color: C.ink }}>{ref_}</span>
+        </div>
+      );
+
+      const SemanticLayer = () => (
+        <section style={{ padding: "20px 64px 100px", maxWidth: 1280, margin: "0 auto" }}>
+          <Label>Layer 02 · Semantic</Label>
+          <STitle size={48}>Same intent, <I>different</I> source</STitle>
+          <div style={{ maxWidth: 720, marginTop: 16, marginBottom: 48 }}>
+            <Body>Semantic tokens describe what a value <em>does</em> — surface.primary, content.secondary, border.critical. Every one carries two source references (dark and light); components don't know which is active. That's what made light mode a swap, not a fork.</Body>
+          </div>
+
+          {SEMANTIC_GROUPS.map((g) => (
+            <div key={g.name} style={{ background: C.card, borderRadius: 14, marginBottom: 24, overflow: "hidden", border: `1px solid ${C.rule}` }}>
+              <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", padding: "20px 28px", borderBottom: `1px solid ${C.rule}` }}>
+                <div style={{ fontFamily: serif, fontStyle: "italic", fontSize: 24, color: C.ink }}>{g.name}</div>
+                <div style={{ fontFamily: sans, fontSize: 12, color: C.ink3, letterSpacing: "0.1em", textTransform: "uppercase" }}>{g.count} tokens</div>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr 1fr", padding: "12px 28px", borderBottom: `1px solid ${C.rule}`, fontFamily: sans, fontSize: 11, fontWeight: 600, letterSpacing: "0.12em", textTransform: "uppercase", color: C.ink3 }}>
+                <div>Name</div><div>Dark mode</div><div>Light mode</div>
+              </div>
+              {g.rows.map((row, i) => (
+                <div key={row[0]} style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr 1fr", padding: "14px 28px", alignItems: "center", borderBottom: i === g.rows.length - 1 ? "none" : `1px solid ${C.rule}` }}>
+                  <div style={{ fontFamily: mono, fontSize: 13, color: C.ink }}>{row[0]}</div>
+                  <Swatch ref_={row[1]} hex={row[2]} />
+                  <Swatch ref_={row[3]} hex={row[4]} />
+                </div>
+              ))}
+            </div>
+          ))}
+        </section>
+      );
+
+      /* ─── SPACING ────────────────────────────────────────────────────── */
+      const PLATFORM_TABS = [
+        { key: "phone", label: "iPhone" },
+        { key: "ipad",  label: "iPad" },
+        { key: "web",   label: "Web" },
+      ];
+
+      const SpacingLayer = () => {
+        const [platform, setPlatform] = useState("phone");
+        const tokens = SPACE_PLATFORMS[platform];
+        return (
+          <section style={{ padding: "60px 64px 100px", maxWidth: 1280, margin: "0 auto" }}>
+            <Label color={C.coral}>Spacing</Label>
+            <STitle size={48}>To the <I>space</I> between</STitle>
+            <div style={{ maxWidth: 720, marginTop: 16, marginBottom: 36 }}>
+              <Body>Three families — space (the gap between siblings), screen padding (the margin between content and the frame), and padding (the breathing room inside a component). Spacing values adjust based on platform type, so a phone, a tablet, and a desktop each get a rhythm tuned to their hand and their eye.</Body>
+            </div>
+            <div style={{ display: "flex", gap: 8, marginBottom: 32 }}>
+              {PLATFORM_TABS.map(({ key, label }) => (
+                <button
+                  key={key}
+                  onClick={() => setPlatform(key)}
+                  data-cursor="link"
+                  style={{
+                    padding: "8px 22px", borderRadius: 999,
+                    border: `1px solid ${platform === key ? C.ink : C.rule}`,
+                    background: platform === key ? C.ink : "transparent",
+                    color: platform === key ? "#fff" : C.ink2,
+                    fontFamily: sans, fontSize: 13, fontWeight: 500,
+                    cursor: "pointer", transition: "background 0.15s, color 0.15s, border-color 0.15s",
+                  }}
+                >{label}</button>
+              ))}
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1.1fr 1fr 1fr", gap: 24 }}>
+              {tokens.map((s) => (
+                <div key={s.group} style={{ background: C.card, borderRadius: 14, border: `1px solid ${C.rule}`, overflow: "hidden" }}>
+                  <div style={{ padding: "20px 24px", borderBottom: `1px solid ${C.rule}`, fontFamily: serif, fontStyle: "italic", fontSize: 22, color: C.ink }}>{s.group}</div>
+                  {s.rows.map((row, i) => (
+                    <div key={i} style={{ padding: "12px 24px", borderBottom: i === s.rows.length - 1 ? "none" : `1px solid ${C.rule}`, display: "grid", gridTemplateColumns: "1fr auto", gap: 12, alignItems: "center" }}>
+                      <div style={{ fontFamily: mono, fontSize: 12, color: C.ink, fontWeight: 600 }}>
+                        {row[0]}{row[1] && <span style={{ color: C.ink3, fontWeight: 400 }}> · {row[1]}</span>}
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <div style={{ width: Math.min(row[2], 80), height: 6, background: C.coral, borderRadius: 3 }} />
+                        <div style={{ fontFamily: mono, fontSize: 12, color: C.ink2, minWidth: 28, textAlign: "right" }}>{row[2]}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+            <div style={{ marginTop: 14, fontFamily: sans, fontSize: 12, color: C.ink3 }}>Bar lengths reflect the value (px) for the selected platform.</div>
+          </section>
+        );
+      };
+
+      /* ─── TYPOGRAPHY ─────────────────────────────────────────────────── */
+      const TypographyLayer = () => (
+        <section style={{ padding: "20px 64px 100px", maxWidth: 1280, margin: "0 auto" }}>
+          <Label color={C.coral}>Typography</Label>
+          <STitle size={48}>One <I>family</I>, three sizes</STitle>
+          <div style={{ maxWidth: 720, marginTop: 16, marginBottom: 48 }}>
+            <Body>The HALO type token resolves to one of three sizes — Regular for the default layout, and Small / Large for visualizing how the design holds up against a variety of font sizes. </Body>
+          </div>
+
+          {/* Font family */}
+          <div style={{ background: C.card, borderRadius: 14, border: `1px solid ${C.rule}`, overflow: "hidden" }}>
+            <div style={{ padding: "20px 28px", borderBottom: `1px solid ${C.rule}`, fontFamily: serif, fontStyle: "italic", fontSize: 22, color: C.ink }}>Font-family · HALO</div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", padding: "16px 28px" }}>
+              {TYPE_FONT_FAMILY.map(([role, fam]) => (
+                <div key={role}>
+                  <div style={{ fontFamily: sans, fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: C.ink3, fontWeight: 600 }}>{role}</div>
+                  <div style={{ fontFamily: sans, fontSize: 20, color: C.ink, fontWeight: 500, marginTop: 4 }}>{fam}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Type scale */}
+          <div style={{ marginTop: 24, background: C.card, borderRadius: 14, border: `1px solid ${C.rule}`, overflow: "hidden" }}>
+            <div style={{ padding: "20px 28px", borderBottom: `1px solid ${C.rule}`, display: "grid", gridTemplateColumns: "0.7fr 1fr 1fr 1fr", fontFamily: sans, fontSize: 11, fontWeight: 600, letterSpacing: "0.12em", textTransform: "uppercase", color: C.ink3 }}>
+              <div>Token</div><div>Regular</div><div>Small</div><div>Large</div>
+            </div>
+            {TYPE_SCALE.map((row, i) => {
+              const [tok, reg, sm, lg, lhReg, lhSm, lhLg] = row;
+              const cell = (size, lh) => (
+                <div>
+                  <div style={{ fontFamily: sans, fontSize: size, lineHeight: `${lh}px`, color: C.ink, fontWeight: 500 }}>The quick brown</div>
+                  <div style={{ fontFamily: mono, fontSize: 10, color: C.ink3, marginTop: 4 }}>{size} / {lh}</div>
+                </div>
+              );
+              return (
+                <div key={tok} style={{ display: "grid", gridTemplateColumns: "0.7fr 1fr 1fr 1fr", padding: "18px 28px", borderBottom: i === TYPE_SCALE.length - 1 ? "none" : `1px solid ${C.rule}`, alignItems: "center" }}>
+                  <div style={{ fontFamily: mono, fontSize: 13, color: C.ink, fontWeight: 600 }}>{tok}</div>
+                  {cell(reg, lhReg)}{cell(sm, lhSm)}{cell(lg, lhLg)}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Weight scale */}
+          <div style={{ marginTop: 24, background: C.card, borderRadius: 14, border: `1px solid ${C.rule}`, overflow: "hidden" }}>
+            <div style={{ padding: "20px 28px", borderBottom: `1px solid ${C.rule}`, fontFamily: serif, fontStyle: "italic", fontSize: 22, color: C.ink }}>Font-weight</div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(9, 1fr)", padding: "20px 28px", gap: 12 }}>
+              {TYPE_WEIGHTS.map(([tok, w, name]) => (
+                <div key={tok}>
+                  <div style={{ fontFamily: sans, fontWeight: w, fontSize: 22, color: C.ink, letterSpacing: "-0.01em" }}>Aa</div>
+                  <div style={{ fontFamily: mono, fontSize: 10, color: C.ink3, marginTop: 6 }}>{tok} · {name}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      );
+
+      /* ─── COMPONENT LIBRARY ──────────────────────────────────────────── */
+      const P = {
+        bg:    "#10141C",
+        card:  "#1B2230",
+        ink:   "rgba(255,255,255,0.92)",
+        ink2:  "rgba(255,255,255,0.5)",
+        ink3:  "rgba(255,255,255,0.22)",
+        rule:  "rgba(255,255,255,0.07)",
+        coral: "#1779DA",
+        blue:  "#6FA8D6",
+        green: "#5FBE97",
+        amber: "#E0AE0F",
+        red:   "#E56A77",
+      };
+
+      const CompCard = ({ name, token, tokenColor, children, fullWidth, minHeight }) => (
+        <div style={{ background: P.card, borderRadius: 12, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+          <div style={{ flex: 1, padding: "20px 20px 16px", display: "flex", alignItems: "center", justifyContent: "center", minHeight: minHeight ?? (fullWidth ? 140 : 190) }}>
+            {children}
+          </div>
+          <div style={{ padding: "12px 16px", borderTop: `1px solid ${P.rule}` }}>
+            <div style={{ fontFamily: sans, fontSize: 12, fontWeight: 600, color: P.ink, marginBottom: 3 }}>{name}</div>
+            <div style={{ fontFamily: mono, fontSize: 10, color: tokenColor || P.ink2 }}>{token}</div>
+          </div>
+        </div>
+      );
+
+      const SecHead = ({ num, cat, desc }) => (
+        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "11px 16px", borderRadius: 8, background: "rgba(255,255,255,0.04)", marginBottom: 12 }}>
+          <span style={{ width: 7, height: 7, borderRadius: "50%", background: P.coral, flexShrink: 0 }} />
+          <span style={{ fontFamily: mono, fontSize: 10, color: P.ink2, letterSpacing: "0.14em" }}>{num} · {cat}</span>
+          <span style={{ fontFamily: serif, fontStyle: "italic", fontSize: 15, color: P.ink, marginLeft: 2 }}>{desc}</span>
+        </div>
+      );
+
+      const Library = () => (
+        <section style={{ padding: "60px 64px 80px", maxWidth: 1280, margin: "0 auto" }}>
+          <TwoCol
+            left={<><Label>Components</Label><STitle size={48}>100+ components, <I>one</I> contract</STitle></>}
+            right={<>
+              <Body size={17}>Every component is wired to the semantic token layer — never to a raw hex. Each ships with implementation guidance, real screen flows showing it in context, and accessibility notes.</Body>
+              <Body size={17}>A sample of the live kit below — atoms through full surfaces, pulled straight from the Moonwave product.</Body>
+            </>}
+          />
+
+          <div style={{ marginTop: 48, background: P.bg, borderRadius: 18, overflow: "hidden", boxShadow: "0 4px 40px rgba(0,0,0,0.45)" }}>
+            <div style={{ padding: "24px 24px 0" }}>
+              {/* 01 ATOMS */}
+              <SecHead num="01" cat="ATOMS" desc="the smallest legible units" />
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 24 }}>
+
+                {/* Task status */}
+                <CompCard name="Status icons">
+                  <img src="images/Task-status.svg" alt="Task status" style={{ maxHeight: 170, maxWidth: "100%", objectFit: "contain" }} />
+                </CompCard>
+
+                {/* Progress circular */}
+                <CompCard name="Progress · circular">
+                  <img src="images/Progress-circle.svg" alt="Progress circular" style={{ maxHeight: 170, maxWidth: "100%", objectFit: "contain" }} />
+                </CompCard>
+
+                {/* Tags */}
+                <CompCard name="Tag · event status">
+                  <img src="images/Tag-eventstatus.svg" alt="Tag event status" style={{ maxHeight: 170, maxWidth: "100%", objectFit: "contain" }} />
+                </CompCard>
+
+                {/* Tile button */}
+                <CompCard name="Tile button">
+                  <img src="images/Tile-buttons.svg" alt="Tile button" style={{ maxHeight: 170, maxWidth: "100%", objectFit: "contain" }} />
+                </CompCard>
+              </div>
+
+              {/* 02 ACTIONS */}
+              <SecHead num="02" cat="ACTIONS" desc="three affordances, every state" />
+              <div style={{ marginBottom: 24 }}>
+                <CompCard name="Button · primary / secondary / tertiary" fullWidth minHeight={220}>
+                  <img src="images/Button.svg" alt="Button states" style={{ width: "100%", height: "auto", maxHeight: 200, objectFit: "contain" }} />
+                </CompCard>
+              </div>
+
+              {/* 03 CARDS */}
+              <SecHead num="03" cat="CARDS" desc="information, in context" />
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 24 }}>
+                <CompCard name="Card · flight turnaround" minHeight={220}>
+                  <img src="images/Flight-card-lead.svg" alt="Flight card lead" style={{ maxHeight: 200, maxWidth: "100%", objectFit: "contain" }} />
+                </CompCard>
+
+                <CompCard name="Capture · photo or note" minHeight={220}>
+                  <img src="images/Photo-or-note.svg" alt="Capture photo or note" style={{ maxHeight: 200, maxWidth: "100%", objectFit: "contain" }} />
+                </CompCard>
+
+                <CompCard name="Event card · acknowledged" minHeight={220}>
+                  <img src="images/Acknowledged.svg" alt="Event card acknowledged" style={{ maxHeight: 200, maxWidth: "100%", objectFit: "contain" }} />
+                </CompCard>
+              </div>
+
+              {/* 04 NAVIGATION */}
+              <SecHead num="04" cat="NAVIGATION" desc="one pattern, three surfaces" />
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
+                <CompCard name="Mobile navigation" minHeight={300}>
+                  <img src="images/nav-mobile.svg" alt="Mobile navigation" style={{ maxHeight: 280, maxWidth: "100%", objectFit: "contain" }} />
+                </CompCard>
+
+                <CompCard name="iPad navigation" minHeight={300}>
+                  <img src="images/ipad-nav.svg" alt="iPad navigation" style={{ maxHeight: 280, maxWidth: "100%", objectFit: "contain" }} />
+                </CompCard>
+
+                <CompCard name="Web navigation" minHeight={300}>
+                  <img src="images/nav-web.svg" alt="Web navigation" style={{ maxHeight: 280, maxWidth: "100%", objectFit: "contain" }} />
+                </CompCard>
+              </div>
+            </div>
+
+          </div>
+        </section>
+      );
+
+      /* ─── IMPLEMENTATION ─────────────────────────────────────────────── */
+      const IM = {
+        panel:      "#10141C",
+        panel2:     "#161B25",
+        tile:       "#1B2230",
+        line:       "rgba(255,255,255,0.07)",
+        mat:        "#0C0F16",
+        name:       "#E7ECF3",
+        muted:      "#79859A",
+        coral:      "#1779DA",
+        blue:       "#6FA8D6",
+        green:      "#5FBE97",
+        violet:     "#8B7CFF",
+        violetSoft: "rgba(139,124,255,0.12)",
+      };
+
+      const IZone = ({ n, label, note, children }) => (
+        <div style={{ marginTop: 40 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 20 }}>
+            <span style={{ width: 7, height: 7, background: IM.coral, borderRadius: 2, flexShrink: 0 }} />
+            <span style={{ fontFamily: mono, fontSize: 11, letterSpacing: "0.22em", textTransform: "uppercase", color: IM.muted }}>{n} · {label}</span>
+            <span style={{ fontFamily: serif, fontStyle: "italic", fontSize: 19, color: "rgba(231,236,243,0.82)" }}>{note}</span>
+            <span style={{ flex: 1, height: 1, background: IM.line }} />
+          </div>
+          {children}
+        </div>
+      );
+
+      const NoteCard = ({ tag, date, title, body, platform }) => (
+        <div style={{ background: IM.tile, border: `1px solid ${IM.line}`, borderRadius: 14, padding: "20px 22px 22px", display: "flex", flexDirection: "column" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+            <span style={{ fontFamily: mono, fontSize: 10, letterSpacing: "0.16em", textTransform: "uppercase", color: IM.violet, background: IM.violetSoft, padding: "4px 9px", borderRadius: 999 }}>Design note</span>
+            <span style={{ fontFamily: mono, fontSize: 10.5, color: IM.muted }}>{date}</span>
+          </div>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 8 }}>
+            <span style={{ fontFamily: mono, fontSize: 11, color: IM.muted }}>{tag}</span>
+            <span style={{ fontFamily: sans, fontSize: 17, fontWeight: 600, color: IM.name, letterSpacing: "-0.01em" }}>{title}</span>
+          </div>
+          <p style={{ fontFamily: sans, fontSize: 13.5, lineHeight: 1.6, color: "rgba(231,236,243,0.66)", margin: 0 }}>{body}</p>
+          <div style={{ marginTop: "auto", paddingTop: 16 }}>
+            <span style={{ fontFamily: mono, fontSize: 10, letterSpacing: "0.12em", textTransform: "uppercase", color: IM.muted }}>↳ {platform}</span>
+          </div>
+        </div>
+      );
+
+      const Plate = ({ src, title, sub, meta }) => (
+        <a href={src} target="_blank" rel="noopener" style={{ display: "flex", flexDirection: "column", background: IM.tile, border: `1px solid ${IM.line}`, borderRadius: 16, overflow: "hidden", textDecoration: "none" }}>
+          <div style={{ position: "relative", height: 540, display: "flex", alignItems: "center", justifyContent: "center", padding: 22, background: `radial-gradient(120% 120% at 50% 0%, ${IM.panel2} 0%, ${IM.mat} 100%)` }}>
+            <span style={{ position: "absolute", top: 14, right: 14, zIndex: 2, fontFamily: mono, fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase", color: IM.name, background: "rgba(12,15,22,0.72)", border: `1px solid ${IM.line}`, padding: "5px 9px", borderRadius: 999 }}>
+              Open full spec ↗
+            </span>
+            <img src={src} alt={title} draggable={false} style={{ maxWidth: "100%", maxHeight: "100%", width: "auto", height: "auto", borderRadius: 8, boxShadow: "0 10px 30px rgba(0,0,0,0.5)" }} />
+          </div>
+          <div style={{ borderTop: `1px solid ${IM.line}`, padding: "16px 20px", display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16, background: "rgba(255,255,255,0.015)" }}>
+            <div>
+              <div style={{ fontFamily: sans, fontSize: 15, fontWeight: 600, color: IM.name, letterSpacing: "-0.01em" }}>{title}</div>
+              <div style={{ fontFamily: sans, fontSize: 13, color: "rgba(231,236,243,0.6)", marginTop: 4, lineHeight: 1.45 }}>{sub}</div>
+            </div>
+            <span style={{ fontFamily: mono, fontSize: 10.5, color: IM.blue, whiteSpace: "nowrap", marginTop: 3 }}>{meta}</span>
+          </div>
+        </a>
+      );
+
+      /* ─── SYNTAX HIGHLIGHT ──────────────────────────────────────────── */
+      const CX = {
+        kw: "#C792EA", type: "#7FB5E6", str: "#86D89B", fn: "#FF9D6B",
+        num: "#E0AE6F", anno: "#82AAFF", com: "#5A6678", base: "#C8D2DF",
+      };
+
+      const Code = ({ lines }) => (
+        <pre style={{ margin: 0, fontFamily: mono, fontSize: 12.5, lineHeight: 1.75, color: CX.base, whiteSpace: "pre", overflowX: "auto" }}>
+          {lines.map((toks, i) => (
+            <div key={i} style={{ display: "flex" }}>
+              <span style={{ width: 28, flexShrink: 0, color: "rgba(121,133,154,0.5)", userSelect: "none", textAlign: "right", marginRight: 18 }}>{toks === null ? "" : i + 1}</span>
+              <span>{(toks || []).map(([t, c], j) => <span key={j} style={c ? { color: CX[c] } : undefined}>{t}</span>)}{(!toks || toks.length === 0) ? "​" : null}</span>
+            </div>
+          ))}
+        </pre>
+      );
+
+      const IDEPanel = ({ os, app, file, lang, accent, lines }) => (
+        <div style={{ background: IM.mat, border: `1px solid ${IM.line}`, borderRadius: 16, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 16px", background: "rgba(255,255,255,0.025)", borderBottom: `1px solid ${IM.line}` }}>
+            {["#FF5C5C","#FFBD2E","#28C940"].map(c => <span key={c} style={{ width: 9, height: 9, borderRadius: "50%", background: c }} />)}
+            <span style={{ marginLeft: 8, fontFamily: mono, fontSize: 11, color: "rgba(231,236,243,0.55)" }}>{file}</span>
+            <span style={{ marginLeft: "auto" }}>
+              <span style={{ fontFamily: mono, fontSize: 9.5, letterSpacing: "0.14em", textTransform: "uppercase", color: accent, background: `${accent}1A`, border: `1px solid ${accent}40`, padding: "3px 8px", borderRadius: 999 }}>{lang}</span>
+            </span>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 16px", borderBottom: `1px solid ${IM.line}`, background: "rgba(255,255,255,0.012)" }}>
+            <span style={{ width: 6, height: 6, borderRadius: 2, background: accent }} />
+            <span style={{ fontFamily: sans, fontSize: 11.5, fontWeight: 600, color: IM.name }}>{app}</span>
+            <span style={{ fontFamily: mono, fontSize: 10.5, color: IM.muted }}>· {os}</span>
+            <span style={{ marginLeft: "auto", fontFamily: mono, fontSize: 10, color: IM.green }}>● live preview</span>
+          </div>
+          <div style={{ padding: "18px 18px 22px", flex: 1 }}>
+            <Code lines={lines} />
+          </div>
+        </div>
+      );
+
+      const KOTLIN_LINES = [
+        [["// DynamicNavBar.kt · Jetpack Compose", "com"]],
+        [["@Composable", "anno"]],
+        [["fun ", "kw"], ["DynamicNavBarDemo", "fn"], ["() {"]],
+        [["  var ", "kw"], ["currentTab ", ""], ["by ", "kw"], ["remember", "fn"], [" { mutableStateOf("], ["NavTab", "type"], [".FLIGHTS) }"]],
+        [["  var ", "kw"], ["layoutMode ", ""], ["by ", "kw"], ["remember", "fn"], [" { mutableStateOf("], ["LayoutMode", "type"], [".SINGLE) }"]],
+        [["  var ", "kw"], ["showRightPanel ", ""], ["by ", "kw"], ["remember", "fn"], [" { mutableStateOf("], ["false", "kw"], [") }"]],
+        [],
+        [["  ", ""], ["Box", "fn"], ["("]],
+        [["    modifier = "], ["Modifier", "type"]],
+        [["      .fillMaxSize()"]],
+        [["      .background("], ["NavTokens", "type"], [".appBg)"]],
+        [["  ) {"]],
+        [["    ", ""], ["Column", "fn"], ["(modifier = "], ["Modifier", "type"], [".fillMaxSize()) {"]],
+        [["      "], ["if ", "kw"], ["(currentTab == "], ["NavTab", "type"], [".CHAT) {"]],
+        [["        ", ""], ["ChatTwoColumnLayout", "fn"], ["(modifier = "], ["Modifier", "type"], [".weight("], ["1f", "num"], ["))"]],
+        [["      }"]],
+        [["      ", ""], ["DynamicNavBar", "fn"], ["("]],
+        [["        currentTab = currentTab,"]],
+        [["        layoutMode = layoutMode,"]],
+        [["        onTabChange = { currentTab = it }"]],
+        [["      )"]],
+        [["    }"]],
+        [["  }"]],
+        [["}"]]
+      ];
+
+      const SWIFT_LINES = [
+        [["// DynamicNavBar.swift · SwiftUI", "com"]],
+        [["struct ", "kw"], ["DynamicNavBar", "type"], [": "], ["View", "type"], [" {"]],
+        [["  let ", "kw"], ["currentTab: "], ["NavTab", "type"]],
+        [["  let ", "kw"], ["layoutMode: "], ["LayoutMode", "type"]],
+        [["  let ", "kw"], ["onTabChange: ("], ["NavTab", "type"], [") -> Void"]],
+        [],
+        [["  @State ", "anno"], ["private var ", "kw"], ["isExpanded: "], ["Bool", "type"], [" = "], ["false", "kw"]],
+        [["  @State ", "anno"], ["private var ", "kw"], ["lastNonTasksTab: "], ["NavTab", "type"], [" = .flights"]],
+        [],
+        [["  private var ", "kw"], ["shouldCondense: "], ["Bool", "type"], [" {"]],
+        [["    layoutMode == .split || currentTab == .chat"]],
+        [["  }"]],
+        [],
+        [["  var ", "kw"], ["body: "], ["some ", "kw"], ["View", "type"], [" {"]],
+        [["    ", ""], ["ZStack", "fn"], ["(alignment: .topLeading) {"]],
+        [["      navPills"]],
+        [["      "], ["if ", "kw"], ["isExpanded {"]],
+        [["        ", ""], ["Color", "type"], [".clear"]],
+        [["          .ignoresSafeArea()"]],
+        [["          .onTapGesture { dismissSidebar() }"]],
+        [["          .zIndex("], ["10", "num"], [")"]],
+        [["      }"]],
+        [["      "], ["if ", "kw"], ["isExpanded {"]],
+        [["        ", ""], ["ExpandedSidebarView", "fn"], ["(...)"]],
+        [["          .transition(.move(edge: .leading))"]],
+        [["      }"]],
+        [["    }"]],
+        [["  }"]],
+        [["}"]]
+      ];
+
+      const SPEC_SCREENS = [
+        "images/instructionseventalerts.png",
+        "images/instructions-tablethorizontal.png",
+        "images/intructions-card.png",
+      ];
+
+      const Implementation = () => {
+        const [idx, setIdx] = useState(0);
+        const [fade, setFade] = useState(true);
+
+        useEffect(() => {
+          const timer = setInterval(() => {
+            setFade(false);
+            setTimeout(() => { setIdx(i => (i + 1) % SPEC_SCREENS.length); setFade(true); }, 300);
+          }, 3500);
+          return () => clearInterval(timer);
+        }, []);
+
+        const goTo = (i) => { setFade(false); setTimeout(() => { setIdx(i); setFade(true); }, 300); };
+
+        return (
+          <section style={{ padding: "60px 64px 80px", maxWidth: 1280, margin: "0 auto" }}>
+            <TwoCol
+              left={<><Label>Implementation</Label><STitle size={48}>Every screen ships with its <I>instructions</I></STitle></>}
+              right={<>
+                <Body size={17}>The components don't ship alone. Each flow is documented with design notes — the exact padding, states, nav variants, and responsive rules an engineer needs to build it without guessing.</Body>
+                <Body size={17}>One spec, every platform — mobile, iPad vertical, and iPad horizontal all trace back to the same source of truth.</Body>
+              </>}
+            />
+
+            <div style={{ marginTop: 48, background: IM.panel, borderRadius: 22, padding: "40px 40px 48px", boxShadow: "0 24px 60px rgba(10,14,26,0.28)", border: "1px solid rgba(255,255,255,0.05)" }}>
+              {/* 01 DESIGN NOTES */}
+              <IZone n="01" label="Design notes" note="the rules engineers read">
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16 }}>
+                  <NoteCard
+                    date="05 / 11 / 2026"
+                    tag="GENERAL"
+                    title="iPad padding"
+                    body="Page padding steps from 16px on mobile to 20px everywhere on iPad. Anything not explicitly noted stays identical to the mobile spec."
+                    platform="iPad · vertical + horizontal"
+                  />
+                  <NoteCard
+                    date="05 / 11 / 2026"
+                    tag="NAV BAR"
+                    title="Two nav variants"
+                    body="The task page has two nav bars: a centered top nav by default, and an expanded side panel reached by clicking expand. Full interaction lives in the coded sandbox."
+                    platform="iPad · vertical"
+                  />
+                  <NoteCard
+                    date="04 / 15 / 2026"
+                    tag="FLIGHT CARD"
+                    title="Disabled until confirmed"
+                    body="Before a flight card is confirmed, every button stays disabled except the individual task cards. The lead banner sits at 50% opacity while unconfirmed."
+                    platform="Flight / T·R card"
+                  />
+                  <NoteCard
+                    date="05 / 11 / 2026"
+                    tag="HORIZONTAL"
+                    title="Auto-opening side panel"
+                    body="On horizontal tablet the detail panel opens automatically whenever tasks are assigned. With none assigned it shows an explicit 'No assigned tasks' empty state."
+                    platform="iPad · horizontal"
+                  />
+                </div>
+              </IZone>
+
+              {/* 02 SPEC SHEETS — carousel */}
+              <IZone n="02" label="Spec sheets" note="components, assembled into product">
+                <div style={{ opacity: fade ? 1 : 0, transition: "opacity 0.3s ease" }}>
+                  <div style={{ background: IM.mat, borderRadius: 14, overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", height: 600 }}>
+                    <img
+                      src={SPEC_SCREENS[idx]}
+                      alt={`Spec sheet ${idx + 1}`}
+                      style={{ maxWidth: "100%", maxHeight: "100%", width: "auto", height: "auto", objectFit: "contain" }}
+                    />
+                  </div>
+                </div>
+                <div style={{ display: "flex", justifyContent: "center", gap: 8, marginTop: 16 }}>
+                  {SPEC_SCREENS.map((_, i) => (
+                    <button key={i} onClick={() => goTo(i)} style={{ width: i === idx ? 20 : 8, height: 8, borderRadius: 999, border: "none", background: i === idx ? IM.coral : IM.line, cursor: "pointer", transition: "width 0.3s ease, background 0.3s ease", padding: 0 }} />
+                  ))}
+                </div>
+              </IZone>
+
+              {/* 03 CODED SANDBOX */}
+              <IZone n="03" label="Coded sandbox" note="interactions, built once — shipped native">
+                <div style={{ display: "grid", gridTemplateColumns: "38fr 62fr", gap: 28, alignItems: "start" }}>
+                  <div style={{ background: IM.tile, border: `1px solid ${IM.line}`, borderRadius: 14, padding: "22px 24px" }}>
+                    <p style={{ fontFamily: sans, fontSize: 14.5, lineHeight: 1.62, color: "rgba(231,236,243,0.78)", margin: "0 0 14px" }}>
+                      A static spec can't capture motion. So the trickier interactions — the nav expand, the flight-card state machine, the auto-opening panel — ship as a <span style={{ color: IM.green, fontWeight: 600 }}>live coded sandbox</span> engineers can drop straight into the app.
+                    </p>
+                    
+                    <div style={{ display: "flex", flexDirection: "column", gap: 10, paddingTop: 18, borderTop: `1px solid ${IM.line}` }}>
+                      {[["Android Studio", "Kotlin · Jetpack Compose", IM.green], ["Xcode", "Swift · SwiftUI", IM.blue]].map(([a, b, c]) => (
+                        <div key={a} style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                          <span style={{ width: 8, height: 8, borderRadius: 2, background: c, flexShrink: 0 }} />
+                          <span style={{ fontFamily: sans, fontSize: 13, fontWeight: 600, color: IM.name }}>{a}</span>
+                          <span style={{ fontFamily: mono, fontSize: 11, color: IM.muted }}>{b}</span>
+                        </div>
+                      ))}
+                    </div>
+                    
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                    <IDEPanel os="Android" app="Android Studio" file="DynamicNavBar.kt" lang="Kotlin" accent={IM.green} lines={KOTLIN_LINES} />
+                    <IDEPanel os="iOS" app="Xcode" file="DynamicNavBar.swift" lang="Swift" accent={IM.blue} lines={SWIFT_LINES} />
+                  </div>
+                </div>
+              </IZone>
+
+            </div>
+          </section>
+        );
+      };
+
+      /* ─── AI VALIDATION TERMINAL ─────────────────────────────────────── */
+      const AIValidation = () => (
+        <section style={{ padding: "60px 64px 100px", maxWidth: 1280, margin: "0 auto" }}>
+          <TwoCol
+            left={<><Label>Quality gate</Label><STitle size={48}>The system <I>checks itself</I></STitle></>}
+            right={<Body size={17}>The companies AI has been trained on the design system — tokens, components, usage rules, and accessibility requirements. Engineers can run their work against it without me in the room, and it flags anything that's off before it reaches review.</Body>}
+          />
+          <div style={{ marginTop: 48, background: "#0E1116", borderRadius: 18, padding: 32, fontFamily: mono, fontSize: 13, color: "#E8E2D4", boxShadow: "0 2px 20px rgba(0,0,0,0.2)", lineHeight: 1.8 }}>
+            <div><span style={{ color: "#7DD3A0" }}>✓</span> 500+ tokens resolved across both modes (dark, light)</div>
+            <div><span style={{ color: "#7DD3A0" }}>✓</span> 100+ components mapped to semantic layer · zero brand-direct refs</div>
+            <div><span style={{ color: "#FFD27A" }}>!</span> button.cta failed WCAG AA on Yellow/200 · contrast 4.39 (need 4.5)</div>
+            <div style={{ color: "rgba(232,226,212,0.5)", paddingLeft: 18 }}>↳ suggested: surface.warning content swap to HALO-Slate/E (7.82)</div>
+            <div><span style={{ color: "#FF8B6B" }}>×</span> card padding uses raw value 14 — not in spacing scale</div>
+            <div style={{ color: "rgba(232,226,212,0.5)", paddingLeft: 18 }}>↳ replace with padding/400 (12) or padding/500 (16)</div>
+            <div><span style={{ color: "#7DD3A0" }}>✓</span> Typography roles resolve cleanly · Regular, Small, Large all in scale</div>
+            <div><span style={{ color: "rgba(232,226,212,0.5)" }}>—</span> 1 warning · 1 blocker · review when ready</div>
+          </div>
+        </section>
+      );
+
+      /* ─── ADOPTION / IMPACT ──────────────────────────────────────────── */
+      const Adoption = () => (
+        <section style={{ padding: "60px 64px 100px", maxWidth: 1280, margin: "0 auto" }}>
+          <STitle size={48}>Impact</STitle>
+          <div style={{ marginTop: 48, display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 24 }}>
+            {[
+              ["10",    "engineers consuming the system across 3 platform teams"],
+              ["75%",   "of components migrated to the system — engineers actively working to get to 100"],
+              ["100%",  "of color and spacing updated to the token system across web and mobile"],
+              ["1 swap","to ship light mode once the system was in place"],
+            ].map(([n, d]) => (
+              <div key={d} style={{ background: C.card, borderRadius: 18, padding: 32, boxShadow: "0 2px 12px rgba(0,0,0,0.06)" }}>
+                <div style={{ fontFamily: sans, fontWeight: 700, fontSize: 48, color: C.coral, letterSpacing: "-0.04em", lineHeight: 1 }}>{n}</div>
+                <div style={{ fontFamily: sans, fontSize: 14, color: C.ink2, marginTop: 16, lineHeight: 1.5 }}>{d}</div>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ marginTop: 80 }}>
+            <Label>What the team says</Label>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, marginTop: 24 }}>
+              {[
+                ["The implementation guidance and coded interactions make it so easy to transfer designs into the product. I know exactly how each element should behave.", "iOS Lead Engineer"],
+                ["This system is so much more maintainable. I used to have 30 different hex codes for grey.", "Lead Web Engineer"],
+              ].map(([q, a]) => (
+                <div key={a}>
+                  <div style={{ fontFamily: serif, fontStyle: "italic", fontSize: 56, color: C.coral, lineHeight: 0.5, marginBottom: 12 }}>"</div>
+                  <div style={{ fontFamily: serif, fontStyle: "italic", fontSize: 22, color: C.ink, lineHeight: 1.4, marginBottom: 14 }}>{q}</div>
+                  <div style={{ fontFamily: sans, fontSize: 12, color: C.ink3, letterSpacing: "0.1em", textTransform: "uppercase" }}>— {a}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      );
+
+      /* ─── PREV / NEXT ────────────────────────────────────────────────── */
+      const NextUp = () => (
+        <section style={{ padding: "60px 64px 80px", maxWidth: 1280, margin: "0 auto" }}>
+          <Rule />
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, paddingTop: 48 }}>
+            <a href="wfs-product-definition.html" data-cursor="link" style={{ textDecoration: "none", color: "inherit" }}>
+              <Label>← Previous</Label>
+              <div style={{ fontFamily: serif, fontStyle: "italic", fontSize: 36, color: C.ink, lineHeight: 1.1 }}>Stakeholder-to-Feature Pipeline</div>
+            </a>
+            <a href="halo-for-jal.html" data-cursor="link" style={{ textDecoration: "none", color: "inherit", textAlign: "right" }}>
+              <Label>Next case study →</Label>
+              <div style={{ fontFamily: serif, fontStyle: "italic", fontSize: 36, color: C.coral, lineHeight: 1.1 }}>iPad Navigation & Core Flow</div>
+            </a>
+          </div>
+        </section>
+      );
+
+      /* ─── FOOTER ─────────────────────────────────────────────────────── */
+      const Footer = () => (
+        <footer data-cursor="footer" style={{ padding: "120px 64px 48px", borderTop: `1px solid ${C.rule}`, maxWidth: 1280, margin: "0 auto" }}>
+          <div style={{ fontFamily: sans, fontWeight: 700, fontSize: "clamp(56px, 9vw, 140px)", letterSpacing: "-0.05em", lineHeight: 0.92, marginBottom: 60 }}>
+            Let's <I><span style={{ color: C.coral }}>build</span></I> something.
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 32, paddingTop: 32, borderTop: `1px solid ${C.rule}` }}>
+            <div><Label>Email</Label><a href="mailto:christinajdoolan@hotmail.com" data-cursor="link" style={{ fontFamily: sans, fontSize: 18, color: C.ink, fontWeight: 500 }}>christinajdoolan@hotmail.com</a></div>
+            <div><Label>LinkedIn</Label><a href="https://www.linkedin.com/in/christina-doolan" target="_blank" rel="noopener noreferrer" data-cursor="link" style={{ fontFamily: sans, fontSize: 18, color: C.ink, fontWeight: 500 }}>/christina-doolan</a></div>
+            <div><Label>Resume</Label><a href="#" data-cursor="link" style={{ fontFamily: sans, fontSize: 18, color: C.ink, fontWeight: 500 }}>Download PDF →</a></div>
+            <div style={{ textAlign: "right" }}><Label>©</Label><div style={{ fontFamily: sans, fontSize: 18, color: C.ink, fontWeight: 500 }}>Christina Doolan, 2026</div></div>
+          </div>
+        </footer>
+      );
+
+      /* ─── PAGE ───────────────────────────────────────────────────────── */
+      const CaseStudy2 = () => {
+        const containerRef = useRef(null);
+        const [showTop, setShowTop] = useState(false);
+
+        useEffect(() => {
+          const onScroll = () => setShowTop(window.scrollY > 400);
+          window.addEventListener("scroll", onScroll, { passive: true });
+          return () => window.removeEventListener("scroll", onScroll);
+        }, []);
+
+        return (
+          <div ref={containerRef} style={{ background: C.bg, color: C.ink, position: "relative" }}>
+            <GlobalNav onNavigate={(t) => { window.location.href = t === "home" ? "index.html" : `index.html?tab=${t}`; }} />
+            <Hero containerRef={containerRef} />
+            <Overview />
+            <Architecture />
+            <Modes />
+            <BrandLayer />
+            <SemanticLayer />
+            <SpacingLayer />
+            <TypographyLayer />
+            <Library />
+            <Implementation />
+            <AIValidation />
+            <Adoption />
+            <NextUp />
+            <Footer />
+
+            {showTop && (
+              <button data-cursor="link" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+                style={{ position: "fixed", bottom: 24, right: 24, width: 44, height: 44, borderRadius: "50%", background: "#fff", border: `1px solid ${C.rule}`, cursor: "pointer", fontFamily: sans, fontSize: 18, color: C.ink, zIndex: 20, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                ↑
+              </button>
+            )}
+          </div>
+        );
+      };
+
+      const PasswordGate = ({ children }) => {
+        const [unlocked, setUnlocked] = React.useState(() => localStorage.getItem('cs_auth') === 'ok');
+        const [val, setVal] = React.useState('');
+        const [err, setErr] = React.useState(false);
+        if (unlocked) return children;
+        const submit = (e) => {
+          e.preventDefault();
+          if (val === 'casestudies') { localStorage.setItem('cs_auth', 'ok'); setUnlocked(true); }
+          else { setErr(true); setVal(''); }
+        };
+        return (
+          <div style={{ minHeight:'100vh', background:'#F2EEE6', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', fontFamily:'"Inter Tight", system-ui, sans-serif', cursor:'default' }}>
+            <div style={{ marginBottom:12, fontSize:11, letterSpacing:'0.18em', textTransform:'uppercase', color:'rgba(10,14,26,0.45)' }}>Portfolio · Protected</div>
+            <div style={{ fontSize:36, fontWeight:700, letterSpacing:'-0.03em', color:'#0A0E1A', marginBottom:10 }}>Enter password</div>
+            <div style={{ fontSize:16, color:'rgba(10,14,26,0.55)', marginBottom:44 }}>This case study is password protected.</div>
+            <form onSubmit={submit} style={{ display:'flex', flexDirection:'column', gap:12, width:320 }}>
+              <input type="password" value={val} onChange={e => { setVal(e.target.value); setErr(false); }} placeholder="Password" autoFocus
+                style={{ padding:'14px 18px', borderRadius:12, border:`1.5px solid ${err ? '#FF5C2A' : 'rgba(10,14,26,0.18)'}`, background:'#fff', fontSize:16, color:'#0A0E1A', outline:'none', fontFamily:'"Inter Tight", system-ui, sans-serif' }} />
+              {err && <div style={{ fontSize:13, color:'#FF5C2A' }}>Incorrect password — try again.</div>}
+              <button type="submit" style={{ padding:'14px', borderRadius:12, background:'#0A0E1A', color:'#F2EEE6', fontSize:13, fontWeight:600, letterSpacing:'0.1em', textTransform:'uppercase', border:'none', cursor:'pointer', fontFamily:'"Inter Tight", system-ui, sans-serif' }}>Unlock →</button>
+            </form>
+          </div>
+        );
+      };
+      ReactDOM.createRoot(document.getElementById("root")).render(<PasswordGate><CaseStudy2 /></PasswordGate>);
+    </script>
+  </body>
+</html>
