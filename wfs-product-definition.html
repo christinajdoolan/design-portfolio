@@ -29,7 +29,7 @@
     <script type="text/babel">
       const { useState, useEffect, useRef } = React;
 
-      const C = { bg:"#F2EEE6", card:"#FFFFFF", ink:"#0A0E1A", ink2:"rgba(10,14,26,0.7)", ink3:"rgba(10,14,26,0.5)", rule:"rgba(10,14,26,0.12)", coral:"#1779DA", coralSoft:"#DCEEFF", blue:"#3F7BA4", green:"#2E7B4E", amber:"#B26B1E" };
+      const C = { bg:"#F2EEE6", card:"#FFFFFF", ink:"#0A0E1A", ink2:"rgba(10,14,26,0.7)", ink3:"rgba(10,14,26,0.5)", rule:"rgba(10,14,26,0.12)", coral:"#1779DA", coralSoft:"#DCEEFF", gap:"#FF5C2A", blue:"#3F7BA4", green:"#2E7B4E", amber:"#B26B1E" };
       const sans  = '"Inter Tight", system-ui, sans-serif';
       const serif = '"Instrument Serif", "Times New Roman", serif';
 
@@ -223,7 +223,7 @@
                   <Body>The pattern emerged fast. Operational features were largely covered. As you moved toward billing and contracts, the platform fell away almost entirely.</Body>
                 </div>
                 <div style={{ display:"flex", gap:20, marginTop:24 }}>
-                  {[["Exists",C.green],["Partial",C.amber],["Gap",C.coral]].map(([l,c])=>(
+                  {[["Exists",C.green],["Partial",C.amber],["Gap",C.gap]].map(([l,c])=>(
                     <div key={l} style={{ display:"flex", alignItems:"center", gap:8 }}>
                       <span style={{ width:12, height:12, borderRadius:3, background:c }} />
                       <span style={{ fontFamily:sans, fontSize:13, color:C.ink2 }}>{l}</span>
@@ -237,10 +237,10 @@
                     <div key={name} style={{ marginBottom:i===rows.length-1?0:22 }}>
                       <div style={{ display:"flex", justifyContent:"space-between", marginBottom:8 }}>
                         <span style={{ fontFamily:sans, fontSize:14, fontWeight:600, color:C.ink }}>{name}</span>
-                        <span style={{ fontFamily:sans, fontSize:12, color:ga>=50?C.coral:C.ink3, fontWeight:ga>=50?700:500 }}>{ga>=50?"Major gap":ga>=25?"Partial gap":"Covered"}</span>
+                        <span style={{ fontFamily:sans, fontSize:12, color:ga>=50?C.gap:C.ink3, fontWeight:ga>=50?700:500 }}>{ga>=50?"Major gap":ga>=25?"Partial gap":"Covered"}</span>
                       </div>
                       <div style={{ display:"flex", height:12, borderRadius:6, overflow:"hidden", background:C.rule }}>
-                        <div style={{ width:`${ex}%`, background:C.green }} /><div style={{ width:`${pa}%`, background:C.amber }} /><div style={{ width:`${ga}%`, background:C.coral }} />
+                        <div style={{ width:`${ex}%`, background:C.green }} /><div style={{ width:`${pa}%`, background:C.amber }} /><div style={{ width:`${ga}%`, background:C.gap }} />
                       </div>
                     </div>
                   ))}
@@ -459,7 +459,7 @@
       const Footer = () => (
         <footer data-cursor="footer" style={{ padding:"120px 64px 48px", borderTop:`1px solid ${C.rule}`, maxWidth:1280, margin:"0 auto" }}>
           <div style={{ fontFamily:sans, fontWeight:700, fontSize:"clamp(52px,8.4vw,132px)", letterSpacing:"-0.05em", lineHeight:0.92, marginBottom:60, textWrap:"balance" }}>
-            Have a list of<I><span style={{ color:C.coral }}>product requirements?</span></I> 
+            Have a list of<I><span style={{ color:C.coral }}> product requirements?</span></I> 
           </div>
           <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:32, paddingTop:32, borderTop:`1px solid ${C.rule}` }}>
             <div><Label>Email</Label><a href="mailto:Christinajdoolan@gmail.com" data-cursor="link" style={{ fontFamily:sans, fontSize:18, color:C.ink, fontWeight:500 }}>Christinajdoolan@gmail.com</a></div>
