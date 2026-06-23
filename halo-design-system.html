@@ -1200,7 +1200,7 @@
 
         return (
           <div ref={containerRef} style={{ background: C.bg, color: C.ink, position: "relative" }}>
-            <GlobalNav onNavigate={(t) => { window.location.href = t === "home" ? "index.html" : `index.html?tab=${t}`; }} />
+            <GlobalNav onNavigate={(t) => { window.location.href = t === "home" ? "index.html" : `index.html#${t}`; }} />
             <Hero containerRef={containerRef} />
             <Overview />
             <Architecture />
