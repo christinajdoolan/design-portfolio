@@ -511,7 +511,7 @@
         }, []);
         return (
           <MobileCtx.Provider value={isMobile}>
-          <div ref={containerRef} data-cursor="default" style={{ background:C.bg, minHeight:"100vh", color:C.ink, position:"relative" }}>
+          <div ref={containerRef} data-cursor="default" style={{ background:C.bg, minHeight:"100vh", color:C.ink, position:"relative", overflowX:"hidden" }}>
             <Nav />
             <Hero containerRef={containerRef} />
             <Overview />

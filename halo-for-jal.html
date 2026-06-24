@@ -1337,7 +1337,7 @@
 
         return (
           <MobileCtx.Provider value={isMobile}>
-          <div ref={containerRef} data-cursor="default" style={{ background: C.bg, color: C.ink, position: "relative" }}>
+          <div ref={containerRef} data-cursor="default" style={{ background: C.bg, color: C.ink, position: "relative", overflowX: "hidden" }}>
             {/* <ColorCursor containerRef={containerRef} /> */}
             <GlobalNav onNavigate={(t) => { window.location.href = t === "home" ? "index.html" : `index.html#${t}`; }} />
             <Hero containerRef={containerRef} />

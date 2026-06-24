@@ -828,10 +828,11 @@ const HomepageKineticV2 = ({ onNavigate }) => {
             <span style={{ display: "inline-block", width: 28, height: 1, background: "rgba(10,14,26,0.4)" }} />
             <span>Design Portfolio · Custom Designed & Coded</span>
           </div>
-          <div>(Lead UX/UI Designer)</div>
+          {!isMobile && <div>(Lead UX/UI Designer)</div>}
         </div>
 
         <ArtfulName />
+        {isMobile && <div style={{ fontSize: 12, letterSpacing: "0.16em", textTransform: "uppercase", color: "rgba(10,14,26,0.6)", marginTop: 12 }}>(Lead UX/UI Designer)</div>}
 
         
       </section>
