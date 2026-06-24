@@ -14,7 +14,7 @@
     <style>
       *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
       html { scroll-behavior: smooth; }
-      html, body { background: #F2EEE6; font-family: "Inter Tight", system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+      html, body { background: #F2EEE6; font-family: "Inter Tight", system-ui, sans-serif; -webkit-font-smoothing: antialiased; overflow-x: hidden; }
       a { color: inherit; text-decoration: none; }
       ::-webkit-scrollbar { width: 10px; }
       ::-webkit-scrollbar-track { background: #E8E2D4; }
@@ -323,7 +323,7 @@
             </div>
             <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2,1fr)", gap:24, maxWidth:860, margin:"0 auto" }}>
               {tiers.map(t=>(
-                <div key={t.tier} style={{ background:"#fff", borderRadius:18, padding:28, boxShadow:"0 2px 12px rgba(0,0,0,0.06)", borderTop:`4px solid ${t.color}` }}>
+                <div key={t.tier} style={{ background:"#fff", borderRadius:18, padding:28, boxShadow:"0 2px 12px rgba(0,0,0,0.06)", borderTop: isMobile ? "none" : `4px solid ${t.color}` }}>
                   <span style={{ fontFamily:sans, fontWeight:700, fontSize:18, color:t.color }}>{t.tier}</span>
                   <div style={{ fontFamily:serif, fontStyle:"italic", fontSize:15, color:C.ink3, marginBottom:20, marginTop:6 }}>{t.note}</div>
                   <div style={{ display:"grid", gap:10 }}>
