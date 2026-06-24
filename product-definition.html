@@ -486,19 +486,22 @@
       );
 
       /* ── FOOTER ── */
-      const Footer = () => (
-        <footer data-cursor="footer" style={{ padding:"var(--pad-v-lg) var(--pad-h) 48px", borderTop:`1px solid ${C.rule}`, maxWidth:1280, margin:"0 auto" }}>
-          <div style={{ fontFamily:sans, fontWeight:700, fontSize:"clamp(52px,8.4vw,132px)", letterSpacing:"-0.05em", lineHeight:0.92, marginBottom:60, textWrap:"balance" }}>
-            Have a list of<I><span style={{ color:C.coral }}> product requirements?</span></I> 
-          </div>
-          <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:32, paddingTop:32, borderTop:`1px solid ${C.rule}` }}>
-            <div><Label>Email</Label><a href="mailto:Christinajdoolan@gmail.com" data-cursor="link" style={{ fontFamily:sans, fontSize:18, color:C.ink, fontWeight:500 }}>Christinajdoolan@gmail.com</a></div>
-            <div><Label>LinkedIn</Label><a href="https://www.linkedin.com/in/christina-doolan" data-cursor="link" style={{ fontFamily:sans, fontSize:18, color:C.ink, fontWeight:500 }}>/christina-doolan</a></div>
-            <div><Label>Resume</Label><a href="index.html#resume" data-cursor="link" style={{ fontFamily:sans, fontSize:18, color:C.ink, fontWeight:500 }}>View resume →</a></div>
-            <div style={{ textAlign:"right" }}><Label>©</Label><div style={{ fontFamily:sans, fontSize:18, color:C.ink, fontWeight:500 }}>Christina Doolan, 2026</div></div>
-          </div>
-        </footer>
-      );
+      const Footer = () => {
+        const isMobile = useIsMobile();
+        return (
+          <footer id="contact" data-cursor="footer" style={{ padding: isMobile ? "48px var(--pad-h) 40px" : "160px var(--pad-h) 48px", borderTop:`1px solid ${C.rule}`, maxWidth:1280, margin:"0 auto" }}>
+            <div style={{ fontFamily:sans, fontWeight:700, fontSize:"clamp(48px, 11vw, 180px)", letterSpacing:"-0.05em", lineHeight:0.88, marginBottom: isMobile ? 32 : 60, textWrap:"balance" }}>
+              Let's <span style={{ color:C.coral }}>talk</span>.
+            </div>
+            <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "1fr 1fr 1fr 1fr", gap: isMobile ? 24 : 32, paddingTop:32, borderTop:`1px solid ${C.rule}` }}>
+              <div><Label>Email</Label><a href="mailto:christinajdoolan@gmail.com" data-cursor="link" style={{ fontFamily:sans, fontSize:18, color:C.ink, textDecoration:"none", fontWeight:500, letterSpacing:"-0.01em" }}>christinajdoolan@gmail.com</a></div>
+              <div><Label>LinkedIn</Label><a href="https://www.linkedin.com/in/christina-doolan-36b1a224a/" data-cursor="link" style={{ fontFamily:sans, fontSize:18, color:C.ink, textDecoration:"none", fontWeight:500, letterSpacing:"-0.01em" }}>/christina-doolan</a></div>
+              <div><Label>Resume</Label><a href="index.html#resume" data-cursor="link" style={{ fontFamily:sans, fontSize:18, color:C.ink, textDecoration:"none", fontWeight:500, letterSpacing:"-0.01em" }}>View resume →</a></div>
+              <div style={{ textAlign:"right" }}><Label>Christina Doolan</Label><div style={{ fontFamily:sans, fontSize:18, color:C.ink, fontWeight:500, fontVariantNumeric:"tabular-nums" }}>2026 ©</div></div>
+            </div>
+          </footer>
+        );
+      };
 
       /* ── PAGE ROOT ── */
       const CaseStudy3 = () => {
