@@ -18,9 +18,10 @@
         background: #F2EEE6;
         font-family: "Inter Tight", system-ui, sans-serif;
         -webkit-font-smoothing: antialiased;
+        height: 100%;
       }
-      body { display: flex; flex-direction: column; min-height: 100vh; }
-      #root { flex: 1; display: flex; flex-direction: column; }
+      body { display: flex; flex-direction: column; }
+      #root { flex: 1; display: flex; flex-direction: column; height: 100vh; }
       a { color: inherit; text-decoration: none; }
       :root { --pad-h: 48px; }
       @media (max-width: 680px) { :root { --pad-h: 18px; } }
@@ -48,6 +49,8 @@ const NAV_TABS = [
 
 const MobileCtx = React.createContext(false);
 const useIsMobile = () => React.useContext(MobileCtx);
+const LandscapeCtx = React.createContext(false);
+const useIsLandscape = () => React.useContext(LandscapeCtx);
 
 const navResetBtn = {
   appearance: "none",
@@ -632,10 +635,11 @@ const ScrollProjects = ({ onActiveChange }) => {
 
 const GlobalNav = ({ active, onNavigate, accent = "#FF5C2A" }) => {
   const isMobile = useIsMobile();
+  const isLandscape = useIsLandscape();
   return (
     <div
       style={{
-        position: "sticky",
+        position: isLandscape ? "relative" : "sticky",
         top: 0,
         zIndex: 50,
         padding: isMobile ? "12px 18px" : "20px 48px",
@@ -755,15 +759,15 @@ const HomepageKineticV2 = ({ onNavigate }) => {
       getComputedStyle(scroller).overflowY !== "auto" &&
       getComputedStyle(scroller).overflowY !== "scroll"
     ) {
-      if (scroller === document.body || scroller === document.documentElement) { scroller = null; break; }
       scroller = scroller.parentElement;
+      if (!scroller || scroller === document.body) break;
     }
     const target = scroller || window;
     const onScroll = () => {
       const node = scroller || document.documentElement;
       const max = (node.scrollHeight || 0) - (node.clientHeight || 0);
       if (!max || !Number.isFinite(max) || max <= 0) { setScrollProg(0); return; }
-      const raw = (scroller ? node.scrollTop : window.scrollY) / max;
+      const raw = (node.scrollTop || 0) / max;
       const p = Number.isFinite(raw) ? Math.max(0, Math.min(1, raw)) : 0;
       setScrollProg(p);
     };
@@ -1669,35 +1673,40 @@ const PortfolioApp = () => {
   const initialTab = window.location.hash.slice(1) || new URLSearchParams(window.location.search).get("tab") || "home";
   const [tab, setTab] = React.useState(initialTab);
   const [isMobile, setIsMobile] = React.useState(window.innerWidth < 680);
+  const [isLandscape, setIsLandscape] = React.useState(window.innerWidth >= 680 && window.innerWidth < 1024);
   const scrollRef = React.useRef(null);
 
   React.useEffect(() => {
-    const fn = () => setIsMobile(window.innerWidth < 680);
+    const fn = () => {
+      setIsMobile(window.innerWidth < 680);
+      setIsLandscape(window.innerWidth >= 680 && window.innerWidth < 1024);
+    };
     window.addEventListener("resize", fn);
     return () => window.removeEventListener("resize", fn);
   }, []);
 
   const navigate = (t) => {
     setTab(t);
-    window.scrollTo(0, 0);
+    if (scrollRef.current) scrollRef.current.scrollTop = 0;
   };
 
   React.useEffect(() => {
-    window.scrollTo(0, 0);
+    if (scrollRef.current) scrollRef.current.scrollTop = 0;
   }, [tab]);
 
   return (
-    <MobileCtx.Provider value={isMobile}>
-      <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: "#F2EEE6" }}>
+    <MobileCtx.Provider value={isMobile}><LandscapeCtx.Provider value={isLandscape}>
+      <div style={{ height: "100vh", display: "flex", flexDirection: "column", background: "#F2EEE6" }}>
         <main
-          style={{ flex: 1, overflowX: "hidden", position: "relative" }}
+          ref={scrollRef}
+          style={{ flex: 1, overflowY: "auto", overflowX: "hidden", position: "relative" }}
         >
           {tab === "home"      && <HomepageKineticV2 onNavigate={navigate} />}
           {tab === "portfolio" && <PortfolioView     onNavigate={navigate} />}
           {tab === "resume"    && <ResumeView        onNavigate={navigate} />}
         </main>
       </div>
-    </MobileCtx.Provider>
+    </LandscapeCtx.Provider></MobileCtx.Provider>
   );
 };
 
