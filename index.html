@@ -18,10 +18,9 @@
         background: #F2EEE6;
         font-family: "Inter Tight", system-ui, sans-serif;
         -webkit-font-smoothing: antialiased;
-        height: 100%;
       }
-      body { display: flex; flex-direction: column; }
-      #root { flex: 1; display: flex; flex-direction: column; height: 100vh; }
+      body { display: flex; flex-direction: column; min-height: 100vh; }
+      #root { flex: 1; display: flex; flex-direction: column; }
       a { color: inherit; text-decoration: none; }
       :root { --pad-h: 48px; }
       @media (max-width: 680px) { :root { --pad-h: 18px; } }
@@ -756,15 +755,15 @@ const HomepageKineticV2 = ({ onNavigate }) => {
       getComputedStyle(scroller).overflowY !== "auto" &&
       getComputedStyle(scroller).overflowY !== "scroll"
     ) {
+      if (scroller === document.body || scroller === document.documentElement) { scroller = null; break; }
       scroller = scroller.parentElement;
-      if (!scroller || scroller === document.body) break;
     }
     const target = scroller || window;
     const onScroll = () => {
       const node = scroller || document.documentElement;
       const max = (node.scrollHeight || 0) - (node.clientHeight || 0);
       if (!max || !Number.isFinite(max) || max <= 0) { setScrollProg(0); return; }
-      const raw = (node.scrollTop || 0) / max;
+      const raw = (scroller ? node.scrollTop : window.scrollY) / max;
       const p = Number.isFinite(raw) ? Math.max(0, Math.min(1, raw)) : 0;
       setScrollProg(p);
     };
@@ -1680,19 +1679,18 @@ const PortfolioApp = () => {
 
   const navigate = (t) => {
     setTab(t);
-    if (scrollRef.current) scrollRef.current.scrollTop = 0;
+    window.scrollTo(0, 0);
   };
 
   React.useEffect(() => {
-    if (scrollRef.current) scrollRef.current.scrollTop = 0;
+    window.scrollTo(0, 0);
   }, [tab]);
 
   return (
     <MobileCtx.Provider value={isMobile}>
-      <div style={{ height: "100vh", display: "flex", flexDirection: "column", background: "#F2EEE6" }}>
+      <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: "#F2EEE6" }}>
         <main
-          ref={scrollRef}
-          style={{ flex: 1, overflowY: "auto", overflowX: "hidden", position: "relative" }}
+          style={{ flex: 1, overflowX: "hidden", position: "relative" }}
         >
           {tab === "home"      && <HomepageKineticV2 onNavigate={navigate} />}
           {tab === "portfolio" && <PortfolioView     onNavigate={navigate} />}

@@ -35,6 +35,8 @@
       const { useState, useEffect, useRef } = React;
       const MobileCtx = React.createContext(false);
       const useIsMobile = () => React.useContext(MobileCtx);
+      const LandscapeCtx = React.createContext(false);
+      const useIsLandscape = () => React.useContext(LandscapeCtx);
 
       const C = { bg:"#F2EEE6", card:"#FFFFFF", ink:"#0A0E1A", ink2:"rgba(10,14,26,0.7)", ink3:"rgba(10,14,26,0.5)", rule:"rgba(10,14,26,0.12)", coral:"#1779DA", coralSoft:"#DCEEFF", gap:"#DC2626", blue:"#3F7BA4", green:"#2E7B4E", amber:"#B26B1E" };
       const sans  = '"Inter Tight", system-ui, sans-serif';
@@ -414,6 +416,7 @@
       /* ── 04 ADDITIONAL ── */
       const Additional = () => {
         const isMobile = useIsMobile();
+        const isLandscape = useIsLandscape();
         const items=[
           { t:"Mobile Event Deadlines", c:C.blue, badge:"Mobile", d:"Field-facing deadline tracking so agents see what's due next, on the ramp, without returning to a workstation.",
             mock:<div style={{ display:"flex", gap:12, alignItems:"stretch", width:"100%", height:280 }}>
@@ -435,7 +438,7 @@
             <div style={{ maxWidth:760, marginTop:16, marginBottom:56 }}>
               <Body size={17}>Beyond billing, I owned design for three further committed initiatives. Each reused data the priority features generated — proof that the roadmap was a connected system, not a list of disconnected screens.</Body>
             </div>
-            <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3,1fr)", gap:24 }}>
+            <div style={{ display:"grid", gridTemplateColumns: isMobile || isLandscape ? "1fr" : "repeat(3,1fr)", gap:24 }}>
               {items.map(it=>(
                 <Card key={it.t} style={{ display:"flex", flexDirection:"column", padding: isMobile ? 20 : 32 }}>
                   <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
@@ -507,13 +510,17 @@
       const CaseStudy3 = () => {
         const containerRef = useRef(null);
         const [isMobile, setIsMobile] = useState(window.innerWidth < 680);
+        const [isLandscape, setIsLandscape] = useState(window.innerWidth >= 680 && window.innerWidth < 1024);
         useEffect(() => {
-          const fn = () => setIsMobile(window.innerWidth < 680);
+          const fn = () => {
+            setIsMobile(window.innerWidth < 680);
+            setIsLandscape(window.innerWidth >= 680 && window.innerWidth < 1024);
+          };
           window.addEventListener("resize", fn);
           return () => window.removeEventListener("resize", fn);
         }, []);
         return (
-          <MobileCtx.Provider value={isMobile}>
+          <MobileCtx.Provider value={isMobile}><LandscapeCtx.Provider value={isLandscape}>
           <div ref={containerRef} data-cursor="default" style={{ background:C.bg, minHeight:"100vh", color:C.ink, position:"relative", overflowX:"hidden" }}>
             <Nav />
             <Hero containerRef={containerRef} />
@@ -527,7 +534,7 @@
             <NextUp />
             <Footer />
           </div>
-          </MobileCtx.Provider>
+          </LandscapeCtx.Provider></MobileCtx.Provider>
         );
       };
 
