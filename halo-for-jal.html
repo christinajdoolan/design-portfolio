@@ -43,6 +43,8 @@
       const { useState, useEffect, useRef, Fragment } = React;
       const MobileCtx = React.createContext(false);
       const useIsMobile = () => React.useContext(MobileCtx);
+      const LandscapeCtx = React.createContext(false);
+      const useIsLandscape = () => React.useContext(LandscapeCtx);
 
       /* ─── DESIGN TOKENS ──────────────────────────────────────────────── */
       const C = {
@@ -823,6 +825,7 @@
       /* ─── PROJECT GOALS (PRIORITIES) ────────────────────────────────── */
       const Goals = () => {
         const isMobile = useIsMobile();
+        const isLandscape = useIsLandscape();
         const priorities = [
           {
             no: "01", railBg: "#EEF5FD", darkText: false,
@@ -874,19 +877,19 @@
             />
             <div style={{ marginTop: 60, display: "flex", flexDirection: "column", gap: 24 }}>
               {priorities.map((p) => (
-                <div key={p.no} style={{ background: C.card, borderRadius: 18, boxShadow: "0 2px 12px rgba(0,0,0,0.06)", display: "grid", gridTemplateColumns: isMobile ? "1fr" : "300px 1fr", overflow: "hidden" }}>
+                <div key={p.no} style={{ background: C.card, borderRadius: 18, boxShadow: "0 2px 12px rgba(0,0,0,0.06)", display: "grid", gridTemplateColumns: isMobile || isLandscape ? "1fr" : "300px 1fr", overflow: "hidden" }}>
                   {/* Rail */}
-                  <div style={{ padding: isMobile ? "28px 24px" : 40, display: "flex", flexDirection: "column", justifyContent: "space-between", borderRight: isMobile ? "none" : `1px solid ${C.rule}`, borderBottom: isMobile ? `1px solid ${C.rule}` : "none", background: p.railBg }}>
+                  <div style={{ padding: isMobile || isLandscape ? "28px 24px" : 40, display: "flex", flexDirection: "column", justifyContent: "space-between", borderRight: isMobile || isLandscape ? "none" : `1px solid ${C.rule}`, borderBottom: isMobile || isLandscape ? `1px solid ${C.rule}` : "none", background: p.railBg }}>
                     <div style={{ fontFamily: sans, fontSize: 13, fontWeight: 600, letterSpacing: "0.18em", textTransform: "uppercase", color: C.coral }}>
                       Priority <span>{p.no}</span>
                     </div>
                     <div style={{ fontFamily: serif, fontStyle: "italic", fontSize: 32, lineHeight: 1.12, marginTop: 40, color: C.ink }}>{p.heading}</div>
                   </div>
                   {/* Body */}
-                  <div style={{ padding: isMobile ? "24px" : 40 }}>
+                  <div style={{ padding: isMobile || isLandscape ? "24px" : 40 }}>
                     <p style={{ fontFamily: sans, fontSize: 17, lineHeight: 1.6, color: C.ink2, margin: "0 0 16px" }}>{p.desc}</p>
                     <div style={{ fontFamily: sans, fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase", color: C.ink3, fontWeight: 600, margin: "28px 0 14px" }}>Drivers</div>
-                    <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: 20 }}>
+                    <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : isLandscape ? "1fr 1fr" : "1fr 1fr 1fr", gap: 20 }}>
                       {p.drivers.map((d) => (
                         <div key={d.role} style={{ paddingTop: 16, borderTop: `1px solid ${C.rule}` }}>
                           <div style={{ fontFamily: sans, fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: C.coral, marginBottom: 8 }}>{d.role}</div>
@@ -1127,6 +1130,7 @@
       const BeforeAfter = () => {
         const [lightbox, setLightbox] = useState(null);
         const isMobile = useIsMobile();
+        const isLandscape = useIsLandscape();
 
         const items = [
           { title: "Tablet-first navigation",  desc: "The original experience was largely inherited from mobile, leaving much of the iPad's screen space underutilized. A new two-column layout and navigation model were designed specifically for landscape-oriented tablet workflows, allowing agents and turnaround leads to view operational context alongside detailed information without excessive navigation.", images: ["images/chat.png", "images/Map.png"] },
@@ -1140,7 +1144,7 @@
             {lightbox && <Lightbox src={lightbox} onClose={() => setLightbox(null)} />}
             <SectionTitle size={48}>Design <span style={{ fontFamily: serif, fontStyle: "italic", fontWeight: 400 }}>solutions</span></SectionTitle>
             {items.map((it, i) => (
-              <div key={i} style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: isMobile ? 20 : 32, alignItems: "center", padding: "48px 0", borderTop: `1px solid ${C.rule}` }}>
+              <div key={i} style={{ display: "grid", gridTemplateColumns: isMobile || isLandscape ? "1fr" : "1fr 1fr 1fr", gap: isMobile || isLandscape ? 20 : 32, alignItems: "center", padding: "48px 0", borderTop: `1px solid ${C.rule}` }}>
                 <div>
                   <Label>0{i+1}</Label>
                   <div style={{ fontFamily: serif, fontStyle: "italic", fontSize: 30, color: C.ink, marginBottom: 14, lineHeight: 1.15 }}>{it.title}</div>
@@ -1314,6 +1318,7 @@
         const containerRef = useRef(null);
         const [showTop, setShowTop] = useState(false);
         const [isMobile, setIsMobile] = useState(window.innerWidth < 680);
+        const [isLandscape, setIsLandscape] = useState(window.innerWidth >= 680 && window.innerWidth < 1024);
 
         useEffect(() => {
           const onScroll = () => setShowTop(window.scrollY > 400);
@@ -1322,13 +1327,16 @@
         }, []);
 
         useEffect(() => {
-          const fn = () => setIsMobile(window.innerWidth < 680);
+          const fn = () => {
+            setIsMobile(window.innerWidth < 680);
+            setIsLandscape(window.innerWidth >= 680 && window.innerWidth < 1024);
+          };
           window.addEventListener("resize", fn);
           return () => window.removeEventListener("resize", fn);
         }, []);
 
         return (
-          <MobileCtx.Provider value={isMobile}>
+          <MobileCtx.Provider value={isMobile}><LandscapeCtx.Provider value={isLandscape}>
           <div ref={containerRef} data-cursor="default" style={{ background: C.bg, color: C.ink, position: "relative", overflowX: "hidden" }}>
             {/* <ColorCursor containerRef={containerRef} /> */}
             <GlobalNav onNavigate={(t) => { window.location.href = t === "home" ? "index.html" : `index.html#${t}`; }} />
@@ -1375,7 +1383,7 @@
               </button>
             )}
           </div>
-          </MobileCtx.Provider>
+          </LandscapeCtx.Provider></MobileCtx.Provider>
         );
       };
 

@@ -42,6 +42,8 @@
       const { useState, useEffect, useRef, Fragment } = React;
       const MobileCtx = React.createContext(false);
       const useIsMobile = () => React.useContext(MobileCtx);
+      const LandscapeCtx = React.createContext(false);
+      const useIsLandscape = () => React.useContext(LandscapeCtx);
 
       /* ─── DESIGN TOKENS ──────────────────────────────────────────────── */
       const C = {
@@ -1134,6 +1136,7 @@
         const [idx, setIdx] = useState(0);
         const [fade, setFade] = useState(true);
         const isMobile = useIsMobile();
+        const isLandscape = useIsLandscape();
 
         useEffect(() => {
           const timer = setInterval(() => {
@@ -1158,7 +1161,7 @@
             <div style={{ marginTop: 48, background: IM.panel, borderRadius: 22, padding: "40px 40px 48px", boxShadow: "0 24px 60px rgba(10,14,26,0.28)", border: "1px solid rgba(255,255,255,0.05)" }}>
               {/* 01 DESIGN NOTES */}
               <IZone n="01" label="Design notes" note="the rules engineers read">
-                <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(4, 1fr)", gap: 16 }}>
+                <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : isLandscape ? "1fr 1fr" : "repeat(4, 1fr)", gap: 16 }}>
                   <NoteCard
                     date="05 / 11 / 2026"
                     tag="GENERAL"
@@ -1266,10 +1269,11 @@
       /* ─── ADOPTION / IMPACT ──────────────────────────────────────────── */
       const Adoption = () => {
         const isMobile = useIsMobile();
+        const isLandscape = useIsLandscape();
         return (
         <section style={{ padding: "var(--pad-v) var(--pad-h) 100px", maxWidth: 1280, margin: "0 auto" }}>
           <STitle size={48}>Impact</STitle>
-          <div style={{ marginTop: 48, display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(4, 1fr)", gap: 24 }}>
+          <div style={{ marginTop: 48, display: "grid", gridTemplateColumns: isMobile ? "1fr" : isLandscape ? "1fr 1fr" : "repeat(4, 1fr)", gap: 24 }}>
             {[
               ["10",    "engineers consuming the system across 3 platform teams"],
               ["75%",   "of components migrated to the system — engineers actively working to get to 100"],
@@ -1342,6 +1346,7 @@
         const containerRef = useRef(null);
         const [showTop, setShowTop] = useState(false);
         const [isMobile, setIsMobile] = useState(window.innerWidth < 680);
+        const [isLandscape, setIsLandscape] = useState(window.innerWidth >= 680 && window.innerWidth < 1024);
 
         useEffect(() => {
           const onScroll = () => setShowTop(window.scrollY > 400);
@@ -1350,13 +1355,16 @@
         }, []);
 
         useEffect(() => {
-          const fn = () => setIsMobile(window.innerWidth < 680);
+          const fn = () => {
+            setIsMobile(window.innerWidth < 680);
+            setIsLandscape(window.innerWidth >= 680 && window.innerWidth < 1024);
+          };
           window.addEventListener("resize", fn);
           return () => window.removeEventListener("resize", fn);
         }, []);
 
         return (
-          <MobileCtx.Provider value={isMobile}>
+          <MobileCtx.Provider value={isMobile}><LandscapeCtx.Provider value={isLandscape}>
           <div ref={containerRef} style={{ background: C.bg, color: C.ink, position: "relative", overflowX: "hidden" }}>
             <GlobalNav onNavigate={(t) => { window.location.href = t === "home" ? "index.html" : `index.html#${t}`; }} />
             <Hero containerRef={containerRef} />
@@ -1381,7 +1389,7 @@
               </button>
             )}
           </div>
-          </MobileCtx.Provider>
+          </LandscapeCtx.Provider></MobileCtx.Provider>
         );
       };
 
