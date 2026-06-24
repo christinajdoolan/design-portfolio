@@ -1059,7 +1059,7 @@
             <span style={{ fontFamily: mono, fontSize: 10.5, color: IM.muted }}>· {os}</span>
             <span style={{ marginLeft: "auto", fontFamily: mono, fontSize: 10, color: IM.green }}>● live preview</span>
           </div>
-          <div style={{ padding: "18px 18px 22px", flex: 1 }}>
+          <div style={{ padding: "18px 18px 22px", flex: 1, overflowX: "auto" }}>
             <Code lines={lines} />
           </div>
         </div>
@@ -1227,11 +1227,11 @@
                     </div>
 
                   </div>
-                  <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16 }}>
-                    <div style={{ maxHeight: isMobile ? 280 : "none", overflow: isMobile ? "hidden" : "visible" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16, minWidth: 0 }}>
+                    <div style={{ maxHeight: isMobile ? 280 : "none", overflow: "hidden", minWidth: 0 }}>
                       <IDEPanel os="Android" app="Android Studio" file="DynamicNavBar.kt" lang="Kotlin" accent={IM.green} lines={KOTLIN_LINES} />
                     </div>
-                    <div style={{ maxHeight: isMobile ? 280 : "none", overflow: isMobile ? "hidden" : "visible" }}>
+                    <div style={{ maxHeight: isMobile ? 280 : "none", overflow: "hidden", minWidth: 0 }}>
                       <IDEPanel os="iOS" app="Xcode" file="DynamicNavBar.swift" lang="Swift" accent={IM.blue} lines={SWIFT_LINES} />
                     </div>
                   </div>
