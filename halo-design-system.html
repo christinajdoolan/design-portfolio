@@ -1176,7 +1176,7 @@
               {/* 02 SPEC SHEETS — carousel */}
               <IZone n="02" label="Spec sheets" note="components, assembled into product">
                 <div style={{ opacity: fade ? 1 : 0, transition: "opacity 0.3s ease" }}>
-                  <div style={{ background: IM.mat, borderRadius: 14, overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", height: 600 }}>
+                  <div style={{ background: IM.mat, borderRadius: 14, overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", height: isMobile ? 320 : 600 }}>
                     <img
                       src={SPEC_SCREENS[idx]}
                       alt={`Spec sheet ${idx + 1}`}
