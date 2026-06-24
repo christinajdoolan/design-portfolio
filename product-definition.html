@@ -154,7 +154,7 @@
           {children}
         </div>
       );
-      const Card = ({ children, style={} }) => <div style={{ background:C.card, borderRadius:18, padding:32, boxShadow:"0 2px 12px rgba(0,0,0,0.06)", ...style }}>{children}</div>;
+      const Card = ({ children, style={} }) => <div style={{ background:C.card, borderRadius:18, padding:32, boxShadow:"0 2px 12px rgba(0,0,0,0.06)", boxSizing:"border-box", width:"100%", minWidth:0, ...style }}>{children}</div>;
 
       /* ── HERO ── */
       const Hero = ({ containerRef }) => {
@@ -422,10 +422,10 @@
             </div>
           },
           { t:"OTP Dashboard", c:C.green, badge:"Reporting", d:"On-time-performance reporting built on the delay codes captured upstream — turning operational data into an accountability view.",
-            mock:<Img src="images/OTP-web.png" alt="OTP Dashboard" style={{ width:"100%", display:"block", borderRadius:8 }} />
+            mock:<Img src="images/OTP-web.png" alt="OTP Dashboard" style={{ width:"100%", maxWidth:"100%", display:"block", borderRadius:8 }} />
           },
           { t:"Compliance Dashboard", c:C.amber, badge:"Compliance", d:"A mobile adoption dashboard tracking task completion, submission rates, and on-time event reporting, helping station managers ensure agents were consistently using the platform as intended.",
-            mock:<Img src="images/complience-web.png" alt="Compliance Dashboard" style={{ width:"100%", display:"block", borderRadius:8 }} />
+            mock:<Img src="images/complience-web.png" alt="Compliance Dashboard" style={{ width:"100%", maxWidth:"100%", display:"block", borderRadius:8 }} />
           },
         ];
         return (
@@ -437,11 +437,11 @@
             </div>
             <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3,1fr)", gap:24 }}>
               {items.map(it=>(
-                <Card key={it.t} style={{ display:"flex", flexDirection:"column" }}>
+                <Card key={it.t} style={{ display:"flex", flexDirection:"column", padding: isMobile ? 20 : 32 }}>
                   <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
                     <span style={{ fontFamily:sans, fontSize:10, fontWeight:700, letterSpacing:"0.12em", textTransform:"uppercase", color:it.c, background:`${it.c}1A`, padding:"5px 10px", borderRadius:999 }}>{it.badge}</span>
                   </div>
-                  <div style={{ minHeight:180, display:"flex", alignItems:"center", justifyContent:"center", background:"#FAF7F0", borderRadius:12, padding:20, marginBottom:18 }}>{it.mock}</div>
+                  <div style={{ minHeight:180, width:"100%", overflow:"hidden", display:"flex", alignItems:"center", justifyContent:"center", background:"#FAF7F0", borderRadius:12, padding:16, marginBottom:18, boxSizing:"border-box" }}>{it.mock}</div>
                   <h3 style={{ fontFamily:sans, fontWeight:600, fontSize:21, letterSpacing:"-0.02em", color:C.ink, margin:"0 0 10px" }}>{it.t}</h3>
                   <div style={{ fontFamily:sans, fontSize:14, color:C.ink2, lineHeight:1.55 }}>{it.d}</div>
                 </Card>
