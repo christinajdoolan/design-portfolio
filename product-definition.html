@@ -20,6 +20,10 @@
       ::-webkit-scrollbar-track { background: #E8E2D4; }
       ::-webkit-scrollbar-thumb { background: rgba(10,14,26,0.2); border-radius: 5px; }
       #root { width: 100%; }
+      :root { --pad-v: 60px; --pad-h: 64px; --pad-v-lg: 120px; }
+      @media (max-width: 680px) {
+        :root { --pad-v: 32px; --pad-h: 18px; --pad-v-lg: 40px; }
+      }
     </style>
     <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" crossorigin="anonymous"></script>
     <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" crossorigin="anonymous"></script>
@@ -29,6 +33,8 @@
     <div id="root"></div>
     <script type="text/babel">
       const { useState, useEffect, useRef } = React;
+      const MobileCtx = React.createContext(false);
+      const useIsMobile = () => React.useContext(MobileCtx);
 
       const C = { bg:"#F2EEE6", card:"#FFFFFF", ink:"#0A0E1A", ink2:"rgba(10,14,26,0.7)", ink3:"rgba(10,14,26,0.5)", rule:"rgba(10,14,26,0.12)", coral:"#1779DA", coralSoft:"#DCEEFF", gap:"#DC2626", blue:"#3F7BA4", green:"#2E7B4E", amber:"#B26B1E" };
       const sans  = '"Inter Tight", system-ui, sans-serif';
@@ -111,22 +117,25 @@
       /* ── NAV ── */
       const navBtn = { appearance:"none", border:"none", background:"transparent", cursor:"pointer", fontFamily:sans, padding:0, margin:0 };
       const nav = (t) => { window.location.href = t==="home" ? "index.html" : `index.html#${t}`; };
-      const Nav = () => (
-        <div style={{ position:"sticky", top:0, zIndex:50, padding:"20px 48px", display:"flex", justifyContent:"space-between", alignItems:"center", background:"rgba(242,238,230,0.74)", backdropFilter:"blur(14px) saturate(1.4)", WebkitBackdropFilter:"blur(14px) saturate(1.4)", borderBottom:"1px solid rgba(10,14,26,0.08)" }}>
-          <button type="button" onClick={()=>nav("home")} style={{ ...navBtn, display:"flex", alignItems:"center", color:C.ink }}>
-            <div style={{ width:32, height:32, borderRadius:8, background:"#0A0E1A", color:"#fff", display:"flex", alignItems:"center", justifyContent:"center", fontSize:14, marginRight:10, flexShrink:0 }}>◆</div>
-            <div style={{ textAlign:"left" }}>
-              <div style={{ fontSize:13, fontWeight:700, letterSpacing:"0.04em", textTransform:"uppercase" }}>Christina Doolan</div>
-              <div style={{ fontSize:10, letterSpacing:"0.14em", textTransform:"uppercase", color:"rgba(10,14,26,0.5)", fontWeight:500 }}>UX/UI Designer</div>
+      const Nav = () => {
+        const isMobile = useIsMobile();
+        return (
+          <div style={{ position:"sticky", top:0, zIndex:50, padding: isMobile ? "12px 16px" : "20px 48px", display:"flex", justifyContent:"space-between", alignItems:"center", background:"rgba(242,238,230,0.74)", backdropFilter:"blur(14px) saturate(1.4)", WebkitBackdropFilter:"blur(14px) saturate(1.4)", borderBottom:"1px solid rgba(10,14,26,0.08)" }}>
+            <button type="button" onClick={()=>nav("home")} style={{ ...navBtn, display:"flex", alignItems:"center", color:C.ink }}>
+              <div style={{ width:32, height:32, borderRadius:8, background:"#0A0E1A", color:"#fff", display:"flex", alignItems:"center", justifyContent:"center", fontSize:14, marginRight: isMobile ? 0 : 10, flexShrink:0 }}>◆</div>
+              {!isMobile && <div style={{ textAlign:"left" }}>
+                <div style={{ fontSize:13, fontWeight:700, letterSpacing:"0.04em", textTransform:"uppercase" }}>Christina Doolan</div>
+                <div style={{ fontSize:10, letterSpacing:"0.14em", textTransform:"uppercase", color:"rgba(10,14,26,0.5)", fontWeight:500 }}>UX/UI Designer</div>
+              </div>}
+            </button>
+            <div style={{ display:"flex", gap: isMobile ? 2 : 6, alignItems:"center" }}>
+              {[["home","Home"],["portfolio","Portfolio"],["resume","Resume"]].map(([id,label])=>(
+                <button key={id} type="button" onClick={()=>nav(id)} style={{ ...navBtn, padding: isMobile ? "6px 8px" : "8px 14px", fontSize: isMobile ? 11 : 12, letterSpacing:"0.12em", textTransform:"uppercase", color:"rgba(10,14,26,0.5)", fontWeight:500 }}>{label}</button>
+              ))}
             </div>
-          </button>
-          <div style={{ display:"flex", gap:6, alignItems:"center" }}>
-            {[["home","Home"],["portfolio","Portfolio"],["resume","Resume"]].map(([id,label])=>(
-              <button key={id} type="button" onClick={()=>nav(id)} style={{ ...navBtn, padding:"8px 14px", fontSize:12, letterSpacing:"0.12em", textTransform:"uppercase", color:"rgba(10,14,26,0.5)", fontWeight:500 }}>{label}</button>
-            ))}
           </div>
-        </div>
-      );
+        );
+      };
 
       /* ── SHARED PRIMITIVES ── */
       const Label = ({ children, color=C.coral }) => <div style={{ fontFamily:sans, fontSize:11, letterSpacing:"0.18em", textTransform:"uppercase", color, fontWeight:600, marginBottom:14 }}>{children}</div>;
@@ -134,7 +143,10 @@
       const I = ({ children }) => <span style={{ fontFamily:serif, fontStyle:"italic", fontWeight:400 }}>{children}</span>;
       const Body = ({ children, size=17, color=C.ink2 }) => <p style={{ fontFamily:sans, fontSize:size, lineHeight:1.6, color, margin:"0 0 16px", textWrap:"pretty" }}>{children}</p>;
       const Rule = () => <div style={{ height:1, background:C.rule }} />;
-      const TwoCol = ({ left, right }) => <div style={{ display:"grid", gridTemplateColumns:"35fr 60fr", gap:80 }}><div>{left}</div><div>{right}</div></div>;
+      const TwoCol = ({ left, right }) => {
+        const isMobile = useIsMobile();
+        return <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "35fr 60fr", gap: isMobile ? 28 : 80 }}><div>{left}</div><div>{right}</div></div>;
+      };
       const Phone = ({ children, tall=true, style={} }) => (
         <div style={{ borderRadius:32, border:`2px solid ${C.ink}`, background:"#EDE7DC", aspectRatio:tall?"9/19.5":"9/18", position:"relative", overflow:"hidden", ...style }}>
           <div style={{ position:"absolute", top:8, left:"50%", transform:"translateX(-50%)", width:90, height:22, borderRadius:999, background:C.ink }} />
@@ -145,58 +157,70 @@
       const Card = ({ children, style={} }) => <div style={{ background:C.card, borderRadius:18, padding:32, boxShadow:"0 2px 12px rgba(0,0,0,0.06)", ...style }}>{children}</div>;
 
       /* ── HERO ── */
-      const Hero = ({ containerRef }) => (
-        <section style={{ position:"relative", padding:"60px 64px 120px", minHeight:940, overflow:"hidden" }}>
-          <div style={{ position:"absolute", inset:0, pointerEvents:"none" }}><OrbV2 containerRef={containerRef} themeColor="#1779DA" /></div>
-          <div style={{ position:"relative", zIndex:2, textAlign:"center", paddingTop:80 }}>
-            <span style={{ display:"inline-block", padding:"8px 18px", border:`1px solid ${C.ink}`, borderRadius:999, fontFamily:sans, fontSize:11, letterSpacing:"0.18em", textTransform:"uppercase", color:C.ink, marginBottom:36 }}>Stakeholder Pipeline · Product Definition</span>
-            <h1 style={{ fontFamily:sans, fontWeight:700, fontSize:"clamp(52px,6.2vw,90px)", lineHeight:0.98, letterSpacing:"-0.04em", color:C.ink, maxWidth:1140, margin:"0 auto", textWrap:"balance" }}>
-              Turning client requests into <I>shipped products.</I> 
-            </h1>
-            
-            
-          </div>
-          <div style={{ position:"relative", zIndex:2, display:"grid", gridTemplateColumns:"1fr auto 1fr auto 1fr", gap:18, alignItems:"stretch", maxWidth:1140, margin:"80px auto 0" }}>
-            {[
-              { lab:"The RFP", items:["Operations & workflow","Billing & contracts","Reporting & dashboards","Mobile & compliance"], bg:"rgba(255,255,255,0.7)", color:C.ink2, note:"dozens of requirements" },
-              null,
-              { lab:"Our evaluation", items:["What already exists","What's partially supported","What's a true gap","What's feasible to commit"], bg:"rgba(255,255,255,0.85)", color:C.ink, note:"capability mapping" },
-              null,
-              { lab:"Commited features", items:["Billing","KPI Tracking","OTP Dashboard","Compliance dashboard"], bg:C.coralSoft, color:C.ink, note:"what we'll deliver" },
-            ].map((c,i)=>c==null
-              ? <div key={i} style={{ display:"flex", alignItems:"center", fontFamily:serif, fontStyle:"italic", fontSize:28, color:C.coral }}>→</div>
-              : <div key={i} style={{ background:c.bg, border:`1px solid ${C.rule}`, borderRadius:14, padding:22, backdropFilter:"blur(6px)", display:"flex", flexDirection:"column" }}>
-                  <Label color={C.coral}>{c.lab}</Label>
-                  <ul style={{ margin:"0 0 14px", paddingLeft:16, fontFamily:sans, fontSize:13, color:c.color, lineHeight:1.7, flex:1 }}>{c.items.map(it=><li key={it}>{it}</li>)}</ul>
-                  <div style={{ fontFamily:serif, fontStyle:"italic", fontSize:14, color:C.ink3 }}>{c.note}</div>
-                </div>
+      const Hero = ({ containerRef }) => {
+        const isMobile = useIsMobile();
+        const cards = [
+          { lab:"The RFP", items:["Operations & workflow","Billing & contracts","Reporting & dashboards","Mobile & compliance"], bg:"rgba(255,255,255,0.7)", color:C.ink2, note:"dozens of requirements" },
+          { lab:"Our evaluation", items:["What already exists","What's partially supported","What's a true gap","What's feasible to commit"], bg:"rgba(255,255,255,0.85)", color:C.ink, note:"capability mapping" },
+          { lab:"Commited features", items:["Billing","KPI Tracking","OTP Dashboard","Compliance dashboard"], bg:C.coralSoft, color:C.ink, note:"what we'll deliver" },
+        ];
+        return (
+          <section style={{ position:"relative", padding: isMobile ? "40px 18px 60px" : "60px 64px 120px", minHeight: isMobile ? "auto" : 940, overflow:"hidden" }}>
+            <div style={{ position:"absolute", inset:0, pointerEvents:"none" }}><OrbV2 containerRef={containerRef} themeColor="#1779DA" /></div>
+            <div style={{ position:"relative", zIndex:2, textAlign:"center", paddingTop: isMobile ? 40 : 80 }}>
+              <span style={{ display:"inline-block", padding:"8px 18px", border:`1px solid ${C.ink}`, borderRadius:999, fontFamily:sans, fontSize:11, letterSpacing:"0.18em", textTransform:"uppercase", color:C.ink, marginBottom:36 }}>Stakeholder Pipeline · Product Definition</span>
+              <h1 style={{ fontFamily:sans, fontWeight:700, fontSize:"clamp(36px,6.2vw,90px)", lineHeight:0.98, letterSpacing:"-0.04em", color:C.ink, maxWidth:1140, margin:"0 auto", textWrap:"balance" }}>
+                Turning client requests into <I>shipped products.</I>
+              </h1>
+            </div>
+            {isMobile ? (
+              <div style={{ position:"relative", zIndex:2, display:"flex", flexDirection:"column", gap:12, maxWidth:1140, margin:"40px auto 0" }}>
+                {cards.map((c,i) => (
+                  <div key={i} style={{ background:c.bg, border:`1px solid ${C.rule}`, borderRadius:14, padding:18, backdropFilter:"blur(6px)" }}>
+                    <Label color={C.coral}>{c.lab}</Label>
+                    <ul style={{ margin:"0 0 8px", paddingLeft:16, fontFamily:sans, fontSize:13, color:c.color, lineHeight:1.6 }}>{c.items.map(it=><li key={it}>{it}</li>)}</ul>
+                    <div style={{ fontFamily:serif, fontStyle:"italic", fontSize:13, color:C.ink3 }}>{c.note}</div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div style={{ position:"relative", zIndex:2, display:"grid", gridTemplateColumns:"1fr auto 1fr auto 1fr", gap:18, alignItems:"stretch", maxWidth:1140, margin:"80px auto 0" }}>
+                {[cards[0], null, cards[1], null, cards[2]].map((c,i)=>c==null
+                  ? <div key={i} style={{ display:"flex", alignItems:"center", fontFamily:serif, fontStyle:"italic", fontSize:28, color:C.coral }}>→</div>
+                  : <div key={i} style={{ background:c.bg, border:`1px solid ${C.rule}`, borderRadius:14, padding:22, backdropFilter:"blur(6px)", display:"flex", flexDirection:"column" }}>
+                      <Label color={C.coral}>{c.lab}</Label>
+                      <ul style={{ margin:"0 0 14px", paddingLeft:16, fontFamily:sans, fontSize:13, color:c.color, lineHeight:1.7, flex:1 }}>{c.items.map(it=><li key={it}>{it}</li>)}</ul>
+                      <div style={{ fontFamily:serif, fontStyle:"italic", fontSize:14, color:C.ink3 }}>{c.note}</div>
+                    </div>
+                )}
+              </div>
             )}
-          </div>
-        </section>
-      );
+          </section>
+        );
+      };
 
       /* ── 01 OVERVIEW ── */
-      const Overview = () => (
-        <section style={{ padding:"120px 64px", maxWidth:1280, margin:"0 auto" }}>
+      const Overview = () => {
+        const isMobile = useIsMobile();
+        return (
+        <section style={{ padding:"var(--pad-v-lg) var(--pad-h)", maxWidth:1280, margin:"0 auto" }}>
           <TwoCol
             left={<><STitle>The product<I> definition</I> problem</STitle></>}
             right={<>
-              <Body size={19}>WFS didn't have a feature request. They had a 29 page RFP spanning billing, contracts, reporting, mobile workflows, dashboards, and operational tooling. While many requirements already existed in HALO, others represented significant gaps—and not everything could be built at once.</Body>
+              <Body size={19}>The client didn't have a feature request. They had a 29 page RFP spanning billing, contracts, reporting, mobile workflows, dashboards, and operational tooling. While many requirements already existed in HALO, others represented significant gaps—and not everything could be built at once.</Body>
               <Body size={19}>The challenge wasn't just about designing a feature. It was determining which requirements would deliver the most value, fit within technical constraints, and could realistically be committed to within the project timeline. Before a single screen could be designed, we needed a clear plan for what to build, what to defer, and why.</Body>
             </>}
-
-
-
           />
-          <div style={{ height:80 }} /><Rule />
-          <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:40, padding:"40px 0" }}>
-            {[["Role","Lead Product Designer"],["Client","Worldwide Flight Services"],["Work","RFP eval · Feature development"],["Cadence","Weekly sessions + onsite"]].map(([k,v])=>(
+          <div style={{ height: isMobile ? 40 : 80 }} /><Rule />
+          <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(3,1fr)", gap: isMobile ? 24 : 40, padding:"40px 0", maxWidth: isMobile ? "100%" : 900, margin:"0 auto" }}>
+            {[["Role","Lead Product Designer"],["Work","RFP eval · Feature development"],["Cadence","Weekly sessions + onsite"]].map(([k,v])=>(
               <div key={k}><Label>{k}</Label><div style={{ fontFamily:sans, fontSize:18, color:C.ink, fontWeight:500 }}>{v}</div></div>
             ))}
           </div>
           <Rule />
         </section>
-      );
+        );
+      };
 
       /* ── 03 RFP REVIEW ── */
       const RFPReview = () => {
@@ -214,7 +238,7 @@
           ["Billing Flexibility & Config",      0,  0,100],
         ];
         return (
-          <section style={{ padding:"60px 64px 120px", maxWidth:1280, margin:"0 auto" }}>
+          <section style={{ padding:"var(--pad-v) var(--pad-h) var(--pad-v-lg)", maxWidth:1280, margin:"0 auto" }}>
             <TwoCol
               left={<>
                 <Label>01 · Reviewing the RFP</Label>
@@ -254,20 +278,20 @@
 
       /* ── 06 WORKING WITH WFS ── */
       const WorkingWith = () => (
-        <section style={{ padding:"60px 64px 120px", maxWidth:1280, margin:"0 auto" }}>
+        <section style={{ padding:"var(--pad-v) var(--pad-h) var(--pad-v-lg)", maxWidth:1280, margin:"0 auto" }}>
           <TwoCol
             left={<>
-              <Label>03 · Working with WFS</Label>
+              <Label>03 · Working with the Client</Label>
               <STitle size={46}>Every commitment required a <I>conversation</I></STitle>
               <div style={{ marginTop:20 }}>
-                <Body size={18}>Once billing surfaced as the priority, the work became deeply collaborative. We established weekly working sessions with WFS to understand their real billing workflows, approval structures, reporting needs, and contract rules — then traveled onsite to align on scope and lock commitments face to face.</Body>
+                <Body size={18}>Once billing surfaced as the priority, the work became deeply collaborative. We established weekly working sessions with the client to understand their real billing workflows, approval structures, reporting needs, and contract rules — then traveled onsite to align on scope and lock commitments face to face.</Body>
               </div>
             </>}
             right={
               <Card style={{ padding:36 }}>
                 <Label>Engagement cadence</Label>
                 <div style={{ marginTop:12 }}>
-                  {[["Weekly working sessions","Walk current workflows, review proposed flows, gather feedback"],["Product reviews","Demo iterations against real WFS billing scenarios"],["Onsite alignment","Travel to WFS to pressure-test scope and priorities in person"],["Commitment sign-off","Convert agreed scope into the committed roadmap"]].map(([t,d],i)=>(
+                  {[["Weekly working sessions","Walk current workflows, review proposed flows, gather feedback"],["Product reviews","Demo iterations against real billing scenarios"],["Onsite alignment","Travel to the client to pressure-test scope and priorities in person"],["Commitment sign-off","Convert agreed scope into the committed roadmap"]].map(([t,d],i)=>(
                     <div key={t} style={{ display:"grid", gridTemplateColumns:"auto 1fr", gap:18, paddingBottom:i===3?0:22 }}>
                       <div style={{ display:"flex", flexDirection:"column", alignItems:"center" }}>
                         <div style={{ width:30, height:30, borderRadius:"50%", background:i===3?C.coral:C.coralSoft, color:i===3?"#fff":C.coral, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:sans, fontWeight:700, fontSize:13 }}>{i+1}</div>
@@ -288,15 +312,16 @@
 
       /* ── 07 ROADMAP ── */
       const Roadmap = () => {
+        const isMobile = useIsMobile();
         const tiers=[{tier:"Priority 1",note:"Commit & build first",color:C.coral,items:["Billing","Multi-Airport Support","Events as KPIs","Turnaround Progress Tracking","Delay Coding"]},{tier:"Priority 2",note:"Fast-follow once P1 lands",color:C.blue,items:["KPI Performance Metrics", "complience dashboard"]}];
         return (
-          <section style={{ padding:"60px 64px 120px", maxWidth:1280, margin:"0 auto" }}>
+          <section style={{ padding:"var(--pad-v) var(--pad-h) var(--pad-v-lg)", maxWidth:1280, margin:"0 auto" }}>
             <Label>02 · Defining the roadmap</Label>
             <STitle size={48}>What we <I>committed</I> to</STitle>
             <div style={{ maxWidth:760, marginTop:16, marginBottom:56 }}>
-              <Body size={17}>Mapping the RFP against the existing platform made the priorities clear. Billing stood out as the largest gap—an opportunity to unlock significant value for WFS while addressing functionality the platform didn't yet support. Rather than promising everything in the RFP, we committed to a focused set of deliverables sequenced by impact, complexity, and dependencies. Saying no to the rest—for now—was what made the yeses credible.</Body>
+              <Body size={17}>Mapping the RFP against the existing platform made the priorities clear. Billing stood out as the largest gap—an opportunity to unlock significant value for the client while addressing functionality the platform didn't yet support. Rather than promising everything in the RFP, we committed to a focused set of deliverables sequenced by impact, complexity, and dependencies. Saying no to the rest—for now—was what made the yeses credible.</Body>
             </div>
-            <div style={{ display:"grid", gridTemplateColumns:"repeat(2,1fr)", gap:24, maxWidth:860, margin:"0 auto" }}>
+            <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2,1fr)", gap:24, maxWidth:860, margin:"0 auto" }}>
               {tiers.map(t=>(
                 <div key={t.tier} style={{ background:"#fff", borderRadius:18, padding:28, boxShadow:"0 2px 12px rgba(0,0,0,0.06)", borderTop:`4px solid ${t.color}` }}>
                   <span style={{ fontFamily:sans, fontWeight:700, fontSize:18, color:t.color }}>{t.tier}</span>
@@ -327,19 +352,21 @@
         { n:3, t:"Service ticket review", d:"Closing a turnaround generates service tickets — one per billable service. The OCC reviews each ticket against the operational record and contract rate card, catching mismatches before anything reaches finance.",
           mock:<Img src="images/OCC-review-overview.png" alt="Service ticket review" style={{ width:"100%", display:"block", borderRadius:8 }} />
         },
-        { n:4, t:"Approval workflow", d:"Reviewed tickets route through an approval chain that mirrors WFS's real org — agent submits, OCC approves, finance signs off. Every state change is timestamped into an audit trail that resolves disputes later.",
+        { n:4, t:"Approval workflow", d:"Reviewed tickets route through an approval chain that mirrors the client's real org — agent submits, OCC approves, finance signs off. Every state change is timestamped into an audit trail that resolves disputes later.",
           mock:<Img src="images/pending-approval.png" alt="Approval workflow" style={{ width:"100%", display:"block", borderRadius:8 }} />
         },
         { n:5, t:"Manual billable items", d:"Not everything is captured automatically. Managers can add manual billable items — extra equipment, ad-hoc services — with required justification and proof, so manual entries stay as defensible as system-generated ones.",
           mock:<Img src="images/occ-turnaround-review-web.png" alt="Manual billable items" style={{ width:"100%", display:"block", borderRadius:8 }} />
         },
-        { n:6, t:"Export workflow (V1)", d:"The V1 finish line: a clean export WFS could drop into their existing finance system. Rather than building payment processing, we shipped a reliable, auditable export — the fastest path to real invoices going out the door.",
+        { n:6, t:"Export workflow (V1)", d:"The V1 finish line: a clean export the client could drop into their existing finance system. Rather than building payment processing, we shipped a reliable, auditable export — the fastest path to real invoices going out the door.",
           mock:<Img src="images/export.png" alt="Export workflow" style={{ width:"100%", display:"block", borderRadius:8 }} />
         },
       ];
 
-      const BillingDeepDive = () => (
-        <section style={{ padding:"80px 64px 120px", background:"#fff", borderTop:`1px solid ${C.rule}`, borderBottom:`1px solid ${C.rule}` }}>
+      const BillingDeepDive = () => {
+        const isMobile = useIsMobile();
+        return (
+        <section style={{ padding: isMobile ? "60px var(--pad-h) 80px" : "80px 64px 120px", background:"#fff", borderTop:`1px solid ${C.rule}`, borderBottom:`1px solid ${C.rule}` }}>
           <div style={{ maxWidth:1280, margin:"0 auto" }}>
             <div style={{ display:"flex", alignItems:"baseline", gap:24, marginBottom:24 }}>
               <div><Label color={C.coral}>Deep dive · the priority build</Label><STitle size={56}>Billing, <I>end to end</I></STitle></div>
@@ -358,8 +385,8 @@
             </div>
             <div style={{ display:"grid", gap:20 }}>
               {billingSteps.map((s,i)=>(
-                <div key={s.n} style={{ display:"grid", gridTemplateColumns:"1.15fr 1fr", gap:56, alignItems:"center", padding:"32px 0", borderTop:i===0?"none":`1px solid ${C.rule}` }}>
-                  <div style={{ order:i%2===0?1:2 }}>
+                <div key={s.n} style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1.15fr 1fr", gap: isMobile ? 20 : 56, alignItems:"center", padding:"32px 0", borderTop:i===0?"none":`1px solid ${C.rule}` }}>
+                  <div style={{ order: isMobile ? 1 : (i%2===0?1:2) }}>
                     <div style={{ display:"flex", alignItems:"center", gap:14, marginBottom:14 }}>
                       <span style={{ fontFamily:sans, fontWeight:700, fontSize:13, color:"#fff", background:C.coral, width:30, height:30, borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center" }}>{s.n}</span>
                       <span style={{ fontFamily:sans, fontSize:11, letterSpacing:"0.14em", textTransform:"uppercase", color:C.ink3 }}>Step {s.n} of 6</span>
@@ -367,7 +394,7 @@
                     <h3 style={{ fontFamily:sans, fontWeight:600, fontSize:30, letterSpacing:"-0.02em", color:C.ink, margin:"0 0 14px" }}>{s.t}</h3>
                     <Body size={16}>{s.d}</Body>
                   </div>
-                  <div style={{ order:i%2===0?2:1 }}>
+                  <div style={{ order: isMobile ? 2 : (i%2===0?2:1) }}>
                     <div style={{ background:"#FAF7F0", borderRadius:16, padding:26, border:`1px solid ${C.rule}` }}>{s.mock}</div>
                   </div>
                 </div>
@@ -376,15 +403,17 @@
             <div style={{ marginTop:48, padding:32, background:C.coralSoft, borderRadius:18 }}>
               <Label color={C.coral}>Why this scope</Label>
               <div style={{ fontFamily:serif, fontStyle:"italic", fontSize:28, color:C.ink, lineHeight:1.3, textWrap:"pretty", maxWidth:980 }}>
-                We deliberately drew V1's line at export, not payments. Shipping a clean, auditable handoff to WFS's existing finance system
+                We deliberately drew V1's line at export, not payments. Shipping a clean, auditable handoff to the client's existing finance system
               </div>
             </div>
           </div>
         </section>
-      );
+        );
+      };
 
       /* ── 04 ADDITIONAL ── */
       const Additional = () => {
+        const isMobile = useIsMobile();
         const items=[
           { t:"Mobile Event Deadlines", c:C.blue, badge:"Mobile", d:"Field-facing deadline tracking so agents see what's due next, on the ramp, without returning to a workstation.",
             mock:<div style={{ display:"flex", gap:12, alignItems:"stretch", width:"100%", height:280 }}>
@@ -400,13 +429,13 @@
           },
         ];
         return (
-          <section style={{ padding:"100px 64px 120px", maxWidth:1280, margin:"0 auto" }}>
+          <section style={{ padding: isMobile ? "60px var(--pad-h) 80px" : "100px 64px 120px", maxWidth:1280, margin:"0 auto" }}>
             <Label>04 · Additional deliverables</Label>
             <STitle size={48}>Breadth of <I>ownership</I></STitle>
             <div style={{ maxWidth:760, marginTop:16, marginBottom:56 }}>
               <Body size={17}>Beyond billing, I owned design for three further committed initiatives. Each reused data the priority features generated — proof that the roadmap was a connected system, not a list of disconnected screens.</Body>
             </div>
-            <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:24 }}>
+            <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3,1fr)", gap:24 }}>
               {items.map(it=>(
                 <Card key={it.t} style={{ display:"flex", flexDirection:"column" }}>
                   <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
@@ -424,16 +453,16 @@
 
       /* ── 10 OUTCOME ── */
       const Outcome = () => (
-        <section style={{ padding:"60px 64px 120px", maxWidth:1280, margin:"0 auto" }}>
+        <section style={{ padding:"var(--pad-v) var(--pad-h) var(--pad-v-lg)", maxWidth:1280, margin:"0 auto" }}>
           <Label>05 · Outcome</Label>
           <STitle size={48}>From committed plan to <I>proof of concept</I></STitle>
           <div style={{ marginTop:32, maxWidth:820 }}>
-            <Body size={17}>WFS agreed to move forward with a proof of concept — and the conversation has since expanded. We're now in active discussions with SATS, the parent company that owns WFS, about taking the project further across their broader operations.</Body>
+            <Body size={17}>The client agreed to move forward with a proof of concept — and the conversation has since expanded. We're now in active discussions with their parent organization about taking the project further across their broader operations.</Body>
           </div>
           <div style={{ marginTop:40, padding:36, background:"#fff", borderRadius:18, boxShadow:"0 2px 12px rgba(0,0,0,0.06)" }}>
             <Label>What this project was really about</Label>
             <div style={{ fontFamily:serif, fontStyle:"italic", fontSize:32, color:C.ink, lineHeight:1.3, textWrap:"pretty", maxWidth:1000 }}>
-              The outcome wasn't just a roadmap or a billing workflow—it was credibility. WFS saw that we could turn a complex set of requirements into a focused, deliverable plan.
+              The outcome wasn't just a roadmap or a billing workflow—it was credibility. The client saw that we could turn a complex set of requirements into a focused, deliverable plan.
             </div>
           </div>
         </section>
@@ -441,7 +470,7 @@
 
       /* ── NEXT UP ── */
       const NextUp = () => (
-        <section style={{ padding:"60px 64px 80px", maxWidth:1280, margin:"0 auto" }}>
+        <section style={{ padding:"var(--pad-v) var(--pad-h) 80px", maxWidth:1280, margin:"0 auto" }}>
           <Rule />
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:24, paddingTop:48 }}>
             <a href="halo-for-jal.html">
@@ -458,7 +487,7 @@
 
       /* ── FOOTER ── */
       const Footer = () => (
-        <footer data-cursor="footer" style={{ padding:"120px 64px 48px", borderTop:`1px solid ${C.rule}`, maxWidth:1280, margin:"0 auto" }}>
+        <footer data-cursor="footer" style={{ padding:"var(--pad-v-lg) var(--pad-h) 48px", borderTop:`1px solid ${C.rule}`, maxWidth:1280, margin:"0 auto" }}>
           <div style={{ fontFamily:sans, fontWeight:700, fontSize:"clamp(52px,8.4vw,132px)", letterSpacing:"-0.05em", lineHeight:0.92, marginBottom:60, textWrap:"balance" }}>
             Have a list of<I><span style={{ color:C.coral }}> product requirements?</span></I> 
           </div>
@@ -474,7 +503,14 @@
       /* ── PAGE ROOT ── */
       const CaseStudy3 = () => {
         const containerRef = useRef(null);
+        const [isMobile, setIsMobile] = useState(window.innerWidth < 680);
+        useEffect(() => {
+          const fn = () => setIsMobile(window.innerWidth < 680);
+          window.addEventListener("resize", fn);
+          return () => window.removeEventListener("resize", fn);
+        }, []);
         return (
+          <MobileCtx.Provider value={isMobile}>
           <div ref={containerRef} data-cursor="default" style={{ background:C.bg, minHeight:"100vh", color:C.ink, position:"relative" }}>
             <Nav />
             <Hero containerRef={containerRef} />
@@ -488,6 +524,7 @@
             <NextUp />
             <Footer />
           </div>
+          </MobileCtx.Provider>
         );
       };
 

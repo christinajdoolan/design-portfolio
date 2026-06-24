@@ -23,6 +23,8 @@
       body { display: flex; flex-direction: column; }
       #root { flex: 1; display: flex; flex-direction: column; height: 100vh; }
       a { color: inherit; text-decoration: none; }
+      :root { --pad-h: 48px; }
+      @media (max-width: 680px) { :root { --pad-h: 18px; } }
     </style>
 
     <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" crossorigin="anonymous"></script>
@@ -44,6 +46,9 @@ const NAV_TABS = [
   ["portfolio", "Portfolio"],
   ["resume", "Resume"],
 ];
+
+const MobileCtx = React.createContext(false);
+const useIsMobile = () => React.useContext(MobileCtx);
 
 const navResetBtn = {
   appearance: "none",
@@ -309,7 +314,7 @@ const PROJECTS_V2 = [
     title: "HALO for JAL",
     role: "Lead Product Designer · 2025",
     desc: "Redesigned HALO for iPad Mini, transforming a phone-first experience into a tablet-first operational platform for Japan Airlines ramp agents and turnaround leads.",
-    metrics: ["4-month PoC", "3 user groups", "Tablet-first redesign"],
+    metrics: ["4-month PoC", "2 user groups", "Tablet-first redesign"],
     accent: "#FF5C2A",
     thumbBg: "#BEBEBE",
     thumbType: "light",
@@ -320,16 +325,16 @@ const PROJECTS_V2 = [
   {
     id: "pipeline",
     num: "03",
-    title: "WFS Product Definition",
+    title: "Product Definition",
     role: "Lead Product Designer · 2026",
     desc: "Evaluated a 29-page enterprise RFP, identified product gaps, and transformed hundreds of requirements into a focused roadmap spanning billing, KPI tracking, and operational reporting.",
     metrics: ["29-page RFP", "6 committed initiatives", "1 product roadmap"],
     accent: "#1A3A8A",
-    thumbBg: "transparent",
+    thumbBg: "#BEBEBE",
     thumbType: "dark",
     thumbImg: "images/thumbnail-pipeline.png",
     thumbFit: "cover",
-    link: "wfs-product-definition.html",
+    link: "product-definition.html",
   },
 ];
 
@@ -433,6 +438,45 @@ const ScrollProjects = ({ onActiveChange }) => {
       cancelAnimationFrame(raf);
     };
   }, []);
+
+  const isMobile = useIsMobile();
+
+  if (isMobile) {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: 48 }}>
+        {PROJECTS_V2.map((p, i) => (
+          <a
+            key={p.id}
+            href={p.link || "#"}
+            style={{ textDecoration: "none", color: "inherit", display: "block", borderTop: i === 0 ? "none" : "1px solid rgba(10,14,26,0.1)", paddingTop: i === 0 ? 0 : 48 }}
+          >
+            <div style={{ position: "relative", aspectRatio: "4/3", borderRadius: 14, overflow: "hidden", background: p.thumbBg, marginBottom: 24 }}>
+              {p.thumbImg && <img src={p.thumbImg} alt={p.title} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: p.thumbFit || "cover", objectPosition: "center" }} />}
+              <div style={{ position: "absolute", inset: 0, background: p.thumbType === "dark" ? "linear-gradient(to top, rgba(10,14,26,0.55) 0%, transparent 60%)" : "linear-gradient(to top, rgba(10,14,26,0.4) 0%, transparent 60%)" }} />
+              <div style={{ position: "absolute", top: 14, left: 16, fontFamily: '"Inter Tight", sans-serif', fontSize: 11, letterSpacing: "0.14em", color: "rgba(255,255,255,0.8)", fontVariantNumeric: "tabular-nums" }}>{p.num} / 03</div>
+            </div>
+            <div style={{ fontFamily: '"Inter Tight", sans-serif', fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase", color: p.accent, marginBottom: 10, fontVariantNumeric: "tabular-nums" }}>
+              {p.role.split("·")[0].trim()}
+            </div>
+            <div style={{ fontFamily: '"Inter Tight", sans-serif', fontWeight: 700, fontSize: "clamp(32px, 8vw, 52px)", lineHeight: 0.95, letterSpacing: "-0.04em", marginBottom: 16, color: "#0A0E1A" }}>
+              {p.title}
+            </div>
+            <div style={{ fontSize: 16, lineHeight: 1.55, color: "rgba(10,14,26,0.78)", marginBottom: 20, textWrap: "pretty" }}>
+              {p.desc}
+            </div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 20 }}>
+              {p.metrics.map((m) => (
+                <span key={m} style={{ padding: "6px 12px", border: `1px solid ${p.accent}55`, borderRadius: 999, fontSize: 11, color: p.accent, fontFamily: '"Inter Tight", sans-serif', letterSpacing: "0.04em" }}>{m}</span>
+              ))}
+            </div>
+            <span style={{ fontFamily: '"Inter Tight", sans-serif', fontSize: 13, letterSpacing: "0.12em", textTransform: "uppercase", color: "#0A0E1A", borderBottom: `1px solid ${p.accent}`, paddingBottom: 3, fontWeight: 600 }}>
+              Read case study →
+            </span>
+          </a>
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div ref={wrapperRef} style={{ position: "relative", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 80 }}>
@@ -588,14 +632,14 @@ const ScrollProjects = ({ onActiveChange }) => {
 /* ─── GlobalNav ─────────────────────────────────────────────────── */
 
 const GlobalNav = ({ active, onNavigate, accent = "#FF5C2A" }) => {
-
+  const isMobile = useIsMobile();
   return (
     <div
       style={{
         position: "sticky",
         top: 0,
         zIndex: 50,
-        padding: "20px 48px",
+        padding: isMobile ? "12px 18px" : "20px 48px",
         display: "flex",
         justifyContent: "space-between",
         alignItems: "center",
@@ -610,14 +654,14 @@ const GlobalNav = ({ active, onNavigate, accent = "#FF5C2A" }) => {
         onClick={() => onNavigate && onNavigate("home")}
         style={{ ...navResetBtn, display: "flex", alignItems: "center", color: "#0A0E1A" }}
       >
-        <div style={{ width:32, height:32, borderRadius:8, background:"#0A0E1A", color:"#fff", display:"flex", alignItems:"center", justifyContent:"center", fontSize:14, marginRight:10, flexShrink:0 }}>◆</div>
-        <div style={{ textAlign: "left" }}>
+        <div style={{ width:32, height:32, borderRadius:8, background:"#0A0E1A", color:"#fff", display:"flex", alignItems:"center", justifyContent:"center", fontSize:14, marginRight: isMobile ? 0 : 10, flexShrink:0 }}>◆</div>
+        {!isMobile && <div style={{ textAlign: "left" }}>
           <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: "0.04em", textTransform: "uppercase" }}>Christina Doolan</div>
           <div style={{ fontSize: 10, letterSpacing: "0.14em", textTransform: "uppercase", color: "rgba(10,14,26,0.5)", fontWeight: 500 }}>UX/UI Designer</div>
-        </div>
+        </div>}
       </button>
 
-      <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+      <div style={{ display: "flex", gap: isMobile ? 2 : 6, alignItems: "center" }}>
         {NAV_TABS.map(([id, label]) => {
           const isActive = active === id;
           return (
@@ -631,8 +675,8 @@ const GlobalNav = ({ active, onNavigate, accent = "#FF5C2A" }) => {
                 display: "inline-flex",
                 alignItems: "center",
                 whiteSpace: "nowrap",
-                padding: "8px 14px",
-                fontSize: 12,
+                padding: isMobile ? "8px 10px" : "8px 14px",
+                fontSize: isMobile ? 11 : 12,
                 letterSpacing: "0.12em",
                 textTransform: "uppercase",
                 color: isActive ? "#0A0E1A" : "rgba(10,14,26,0.5)",
@@ -730,6 +774,7 @@ const HomepageKineticV2 = ({ onNavigate }) => {
   }, []);
 
   const themeColor = "#FF5C2A";
+  const isMobile = useIsMobile();
 
   return (
     <div
@@ -737,7 +782,7 @@ const HomepageKineticV2 = ({ onNavigate }) => {
       data-cursor="default"
       style={{
         width: "100%",
-        minHeight: 4800,
+        minHeight: isMobile ? "auto" : 4800,
         background: "#F2EEE6",
         position: "relative",
         overflow: "clip",
@@ -751,7 +796,7 @@ const HomepageKineticV2 = ({ onNavigate }) => {
         </div>
       </div>
 
-      <ColorCursor containerRef={containerRef} />
+      {!isMobile && <ColorCursor containerRef={containerRef} />}
 
       <GlobalNav active="home" onNavigate={onNavigate} accent={themeColor} />
 
@@ -760,8 +805,8 @@ const HomepageKineticV2 = ({ onNavigate }) => {
         style={{
           position: "relative",
           zIndex: 2,
-          padding: "20px 48px 80px",
-          minHeight: "92vh",
+          padding: isMobile ? "20px 18px 48px" : "20px 48px 80px",
+          minHeight: isMobile ? "auto" : "92vh",
           display: "flex",
           flexDirection: "column",
           justifyContent: "center",
@@ -781,7 +826,7 @@ const HomepageKineticV2 = ({ onNavigate }) => {
         >
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <span style={{ display: "inline-block", width: 28, height: 1, background: "rgba(10,14,26,0.4)" }} />
-            <span>Design Portfolio </span>
+            <span>Design Portfolio · Custom Designed & Coded</span>
           </div>
           <div>(Lead UX/UI Designer)</div>
         </div>
@@ -798,7 +843,7 @@ const HomepageKineticV2 = ({ onNavigate }) => {
         style={{
           position: "relative",
           zIndex: 2,
-          padding: "130px 48px 40px",
+          padding: isMobile ? "48px 18px 32px" : "130px 48px 40px",
           borderTop: "1px solid rgba(10,14,26,0.12)",
         }}
       >
@@ -806,8 +851,8 @@ const HomepageKineticV2 = ({ onNavigate }) => {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "0.82fr 1.18fr",
-            gap: 64,
+            gridTemplateColumns: isMobile ? "1fr" : "0.82fr 1.18fr",
+            gap: isMobile ? 32 : 64,
             alignItems: "start",
           }}
         >
@@ -882,7 +927,7 @@ const HomepageKineticV2 = ({ onNavigate }) => {
                 textWrap: "pretty",
               }}
             >
-              Lately that means semantic token systems, coded prototypes, and AI-assisted design workflows.
+              Outside of design, I love painting, exploring new places, and saying yes to anything that feels like an adventure!
             </p>
 
             <div
@@ -918,7 +963,7 @@ const HomepageKineticV2 = ({ onNavigate }) => {
         style={{
           position: "relative",
           zIndex: 2,
-          padding: "120px 48px 60px",
+          padding: isMobile ? "48px 18px 32px" : "120px 48px 60px",
           borderTop: "1px solid rgba(10,14,26,0.12)",
         }}
       >
@@ -951,7 +996,7 @@ const HomepageKineticV2 = ({ onNavigate }) => {
       {/* Scroll projects */}
       <section
         data-cursor="work"
-        style={{ position: "relative", zIndex: 2, padding: "0 48px 80px" }}
+        style={{ position: "relative", zIndex: 2, padding: isMobile ? "0 18px 48px" : "0 48px 80px" }}
       >
         <ScrollProjects onActiveChange={setActiveProject} />
       </section>
@@ -963,17 +1008,17 @@ const HomepageKineticV2 = ({ onNavigate }) => {
         style={{
           position: "relative",
           zIndex: 2,
-          padding: "160px 48px 48px",
+          padding: isMobile ? "48px 18px 40px" : "160px 48px 48px",
           borderTop: "1px solid rgba(10,14,26,0.12)",
         }}
       >
         <div
           style={{
             fontWeight: 700,
-            fontSize: "clamp(56px, 11vw, 180px)",
+            fontSize: "clamp(48px, 11vw, 180px)",
             letterSpacing: "-0.05em",
             lineHeight: 0.88,
-            marginBottom: 60,
+            marginBottom: isMobile ? 32 : 60,
             textWrap: "balance",
           }}
         >
@@ -983,8 +1028,8 @@ const HomepageKineticV2 = ({ onNavigate }) => {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "1fr 1fr 1fr 1fr",
-            gap: 32,
+            gridTemplateColumns: isMobile ? "1fr 1fr" : "1fr 1fr 1fr 1fr",
+            gap: isMobile ? 24 : 32,
             paddingTop: 32,
             borderTop: "1px solid rgba(10,14,26,0.15)",
           }}
@@ -1021,7 +1066,7 @@ const HomepageKineticV2 = ({ onNavigate }) => {
 const CASE_LINKS = {
   halo: "halo-design-system.html",
   ipad: "halo-for-jal.html",
-  pipeline: "wfs-product-definition.html",
+  pipeline: "product-definition.html",
 };
 
 const PortfolioCard = ({ p, idx }) => {
@@ -1200,11 +1245,13 @@ const ctaBtnSecondary = {
   letterSpacing: "0.04em",
 };
 
-const PortfolioView = ({ onNavigate }) => (
+const PortfolioView = ({ onNavigate }) => {
+  const isMobile = useIsMobile();
+  return (
   <div style={{ minHeight: "100%", background: "#F2EEE6", color: "#0A0E1A", fontFamily: '"Inter Tight", system-ui, sans-serif' }}>
     <GlobalNav active="portfolio" onNavigate={onNavigate} />
 
-    <section style={{ padding: "76px 48px 8px" }}>
+    <section style={{ padding: isMobile ? "40px 18px 8px" : "76px 48px 8px" }}>
       <div
         style={{
           fontSize: 11,
@@ -1218,10 +1265,10 @@ const PortfolioView = ({ onNavigate }) => (
         }}
       >
         <span style={{ display: "inline-block", width: 28, height: 1, background: "rgba(10,14,26,0.4)" }} />
-        Selected work 
+        Selected work
       </div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: 40, flexWrap: "wrap" }}>
-        <h1 style={{ fontWeight: 700, fontSize: "clamp(56px, 8vw, 120px)", letterSpacing: "-0.045em", lineHeight: 0.9, margin: 0 }}>
+        <h1 style={{ fontWeight: 700, fontSize: "clamp(48px, 8vw, 120px)", letterSpacing: "-0.045em", lineHeight: 0.9, margin: 0 }}>
           Portfolio<span style={{ color: "#FF5C2A" }}>.</span>
         </h1>
         <p style={{ maxWidth: 340, fontSize: 15.5, lineHeight: 1.55, color: "rgba(10,14,26,0.7)", margin: 0, textWrap: "pretty" }}>
@@ -1230,8 +1277,8 @@ const PortfolioView = ({ onNavigate }) => (
       </div>
     </section>
 
-    <section style={{ padding: "56px 48px 70px" }}>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(440px, 1fr))", gap: "72px 56px" }}>
+    <section style={{ padding: isMobile ? "32px 18px 48px" : "56px 48px 70px" }}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fit, minmax(440px, 1fr))", gap: isMobile ? "48px" : "72px 56px" }}>
         {PROJECTS_V2.map((p, i) => (
           <PortfolioCard key={p.id} p={p} idx={i} />
         ))}
@@ -1240,7 +1287,7 @@ const PortfolioView = ({ onNavigate }) => (
 
     <section
       style={{
-        padding: "60px 48px 90px",
+        padding: isMobile ? "32px 18px 48px" : "60px 48px 90px",
         borderTop: "1px solid rgba(10,14,26,0.12)",
         display: "flex",
         justifyContent: "space-between",
@@ -1262,7 +1309,8 @@ const PortfolioView = ({ onNavigate }) => (
       </div>
     </section>
   </div>
-);
+  );
+};
 
 /* ─── ResumeView ────────────────────────────────────────────────── */
 
@@ -1436,16 +1484,18 @@ const SideBlock = ({ label, children }) => (
 
 const resumeLink = { color: "#0A0E1A", textDecoration: "none", borderBottom: `1px solid ${ACCENT}` };
 
-const ResumeView = ({ onNavigate }) => (
+const ResumeView = ({ onNavigate }) => {
+  const isMobile = useIsMobile();
+  return (
   <div style={{ minHeight: "100%", background: "#F2EEE6", color: "#0A0E1A", fontFamily: '"Inter Tight", system-ui, sans-serif' }}>
     <GlobalNav active="resume" onNavigate={onNavigate} />
 
-    <div style={{ maxWidth: 1180, margin: "0 auto", padding: "64px 48px 110px" }}>
+    <div style={{ maxWidth: 1180, margin: "0 auto", padding: isMobile ? "32px 18px 64px" : "64px 48px 110px" }}>
       <header
         style={{
           display: "grid",
-          gridTemplateColumns: "1.5fr 1fr",
-          gap: 48,
+          gridTemplateColumns: isMobile ? "1fr" : "1.5fr 1fr",
+          gap: isMobile ? 24 : 48,
           alignItems: "end",
           paddingBottom: 40,
           borderBottom: "2px solid #0A0E1A",
@@ -1516,7 +1566,7 @@ const ResumeView = ({ onNavigate }) => (
         </div>
       </header>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1.62fr 0.78fr", gap: 64, marginTop: 8 }}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1.62fr 0.78fr", gap: isMobile ? 40 : 64, marginTop: 8 }}>
         <main>
           <div
             style={{
@@ -1610,14 +1660,22 @@ const ResumeView = ({ onNavigate }) => (
       </div>
     </div>
   </div>
-);
+  );
+};
 
 /* ─── PortfolioApp ──────────────────────────────────────────────── */
 
 const PortfolioApp = () => {
   const initialTab = window.location.hash.slice(1) || new URLSearchParams(window.location.search).get("tab") || "home";
   const [tab, setTab] = React.useState(initialTab);
+  const [isMobile, setIsMobile] = React.useState(window.innerWidth < 680);
   const scrollRef = React.useRef(null);
+
+  React.useEffect(() => {
+    const fn = () => setIsMobile(window.innerWidth < 680);
+    window.addEventListener("resize", fn);
+    return () => window.removeEventListener("resize", fn);
+  }, []);
 
   const navigate = (t) => {
     setTab(t);
@@ -1629,16 +1687,18 @@ const PortfolioApp = () => {
   }, [tab]);
 
   return (
-    <div style={{ height: "100vh", display: "flex", flexDirection: "column", background: "#F2EEE6" }}>
-      <main
-        ref={scrollRef}
-        style={{ flex: 1, overflowY: "auto", overflowX: "hidden", position: "relative" }}
-      >
-        {tab === "home"      && <HomepageKineticV2 onNavigate={navigate} />}
-        {tab === "portfolio" && <PortfolioView     onNavigate={navigate} />}
-        {tab === "resume"    && <ResumeView        onNavigate={navigate} />}
-      </main>
-    </div>
+    <MobileCtx.Provider value={isMobile}>
+      <div style={{ height: "100vh", display: "flex", flexDirection: "column", background: "#F2EEE6" }}>
+        <main
+          ref={scrollRef}
+          style={{ flex: 1, overflowY: "auto", overflowX: "hidden", position: "relative" }}
+        >
+          {tab === "home"      && <HomepageKineticV2 onNavigate={navigate} />}
+          {tab === "portfolio" && <PortfolioView     onNavigate={navigate} />}
+          {tab === "resume"    && <ResumeView        onNavigate={navigate} />}
+        </main>
+      </div>
+    </MobileCtx.Provider>
   );
 };
 

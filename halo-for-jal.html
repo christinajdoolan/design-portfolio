@@ -25,6 +25,10 @@
       ::-webkit-scrollbar-track { background: #E8E2D4; }
       ::-webkit-scrollbar-thumb { background: rgba(10,14,26,0.2); border-radius: 5px; }
       #root { width: 100%; }
+      :root { --pad-v: 60px; --pad-h: 64px; --pad-v-lg: 120px; }
+      @media (max-width: 680px) {
+        :root { --pad-v: 32px; --pad-h: 18px; --pad-v-lg: 40px; }
+      }
     </style>
 
     <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" crossorigin="anonymous"></script>
@@ -36,6 +40,8 @@
 
     <script type="text/babel">
       const { useState, useEffect, useRef, Fragment } = React;
+      const MobileCtx = React.createContext(false);
+      const useIsMobile = () => React.useContext(MobileCtx);
 
       /* ─── DESIGN TOKENS ──────────────────────────────────────────────── */
       const C = {
@@ -185,12 +191,15 @@
 
       const Rule = () => <div style={{ height: 1, background: C.rule }} />;
 
-      const TwoCol = ({ left, right, gap = 80 }) => (
-        <div style={{ display: "grid", gridTemplateColumns: "35fr 60fr", gap }}>
-          <div>{left}</div>
-          <div>{right}</div>
-        </div>
-      );
+      const TwoCol = ({ left, right, gap = 80 }) => {
+        const isMobile = useIsMobile();
+        return (
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "35fr 60fr", gap: isMobile ? 28 : gap }}>
+            <div>{left}</div>
+            <div>{right}</div>
+          </div>
+        );
+      };
 
       /* ─── IPAD FRAME ─────────────────────────────────────────────────── */
       const IPad = ({ children, label, style = {}, screenBg = "#fff" }) => (
@@ -448,20 +457,21 @@
       const NAV_TABS = [["home","Home"],["portfolio","Portfolio"],["resume","Resume"]];
       const navResetBtn = { appearance:"none", border:"none", background:"transparent", cursor:"pointer", fontFamily:'"Inter Tight", system-ui, sans-serif', padding:0, margin:0 };
       const GlobalNav = ({ active, onNavigate, accent = "#FF5C2A" }) => {
+        const isMobile = useIsMobile();
         return (
-          <div style={{ position:"sticky", top:0, zIndex:50, padding:"20px 48px", display:"flex", justifyContent:"space-between", alignItems:"center", background:"rgba(242,238,230,0.74)", backdropFilter:"blur(14px) saturate(1.4)", WebkitBackdropFilter:"blur(14px) saturate(1.4)", borderBottom:"1px solid rgba(10,14,26,0.08)" }}>
+          <div style={{ position:"sticky", top:0, zIndex:50, padding: isMobile ? "12px 16px" : "20px 48px", display:"flex", justifyContent:"space-between", alignItems:"center", background:"rgba(242,238,230,0.74)", backdropFilter:"blur(14px) saturate(1.4)", WebkitBackdropFilter:"blur(14px) saturate(1.4)", borderBottom:"1px solid rgba(10,14,26,0.08)" }}>
             <button type="button" onClick={() => onNavigate && onNavigate("home")} style={{ ...navResetBtn, display:"flex", alignItems:"center", color:"#0A0E1A" }}>
-              <div style={{ width:32, height:32, borderRadius:8, background:"#0A0E1A", color:"#fff", display:"flex", alignItems:"center", justifyContent:"center", fontSize:14, marginRight:10, flexShrink:0 }}>◆</div>
-              <div style={{ textAlign:"left" }}>
+              <div style={{ width:32, height:32, borderRadius:8, background:"#0A0E1A", color:"#fff", display:"flex", alignItems:"center", justifyContent:"center", fontSize:14, marginRight: isMobile ? 0 : 10, flexShrink:0 }}>◆</div>
+              {!isMobile && <div style={{ textAlign:"left" }}>
                 <div style={{ fontSize:13, fontWeight:700, letterSpacing:"0.04em", textTransform:"uppercase" }}>Christina Doolan</div>
                 <div style={{ fontSize:10, letterSpacing:"0.14em", textTransform:"uppercase", color:"rgba(10,14,26,0.5)", fontWeight:500 }}>UX/UI Designer</div>
-              </div>
+              </div>}
             </button>
-            <div style={{ display:"flex", gap:6, alignItems:"center" }}>
+            <div style={{ display:"flex", gap: isMobile ? 2 : 6, alignItems:"center" }}>
               {NAV_TABS.map(([id, label]) => {
                 const isActive = active === id;
                 return (
-                  <button key={id} type="button" onClick={() => onNavigate && onNavigate(id)} style={{ ...navResetBtn, position:"relative", display:"inline-flex", alignItems:"center", whiteSpace:"nowrap", padding:"8px 14px", fontSize:12, letterSpacing:"0.12em", textTransform:"uppercase", color: isActive ? "#0A0E1A" : "rgba(10,14,26,0.5)", fontWeight: isActive ? 600 : 500, transition:"color 0.25s ease" }}>
+                  <button key={id} type="button" onClick={() => onNavigate && onNavigate(id)} style={{ ...navResetBtn, position:"relative", display:"inline-flex", alignItems:"center", whiteSpace:"nowrap", padding: isMobile ? "6px 8px" : "8px 14px", fontSize: isMobile ? 11 : 12, letterSpacing:"0.12em", textTransform:"uppercase", color: isActive ? "#0A0E1A" : "rgba(10,14,26,0.5)", fontWeight: isActive ? 600 : 500, transition:"color 0.25s ease" }}>
                     {isActive && <span style={{ display:"inline-block", width:6, height:6, borderRadius:"50%", background:accent, marginRight:9, flexShrink:0 }} />}
                     {label}
                   </button>
@@ -488,69 +498,73 @@
       };
 
       /* ─── HERO ───────────────────────────────────────────────────────── */
-      const Hero = ({ containerRef }) => (
-        <section style={{ position: "relative", padding: "60px 64px 100px", minHeight: 920, overflow: "hidden" }}>
-          <div style={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
-            <OrbV2 containerRef={containerRef} themeColor="#1779DA" scrollProgress={0} />
-          </div>
-          <div style={{ position: "relative", zIndex: 2, textAlign: "center", paddingTop: 80 }}>
-            <span style={{ display: "inline-block", padding: "8px 18px", border: `1px solid ${C.ink}`, borderRadius: 999, fontFamily: sans, fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase", color: C.ink, marginBottom: 36 }}>
-              iPad Design · Navigation & Core Flow
-            </span>
-            <h1 style={{ fontFamily: sans, fontWeight: 700, fontSize: "clamp(56px, 6.4vw, 92px)", lineHeight: 0.98, letterSpacing: "-0.04em", color: C.ink, maxWidth: 1040, margin: "0 auto 20px", textWrap: "balance" }}>
-              The iPad app that keeps ground operations moving —{" "}
-              <span style={{ fontFamily: serif, fontStyle: "italic", fontWeight: 400, color: C.ink }}>
-                every gate, every shift, every minute.
+      const Hero = ({ containerRef }) => {
+        const isMobile = useIsMobile();
+        return (
+          <section style={{ position: "relative", padding: isMobile ? "40px 18px 60px" : "60px 64px 100px", minHeight: isMobile ? "auto" : 920, overflow: "hidden" }}>
+            <div style={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
+              <OrbV2 containerRef={containerRef} themeColor="#1779DA" scrollProgress={0} />
+            </div>
+            <div style={{ position: "relative", zIndex: 2, textAlign: "center", paddingTop: isMobile ? 40 : 80 }}>
+              <span style={{ display: "inline-block", padding: "8px 18px", border: `1px solid ${C.ink}`, borderRadius: 999, fontFamily: sans, fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase", color: C.ink, marginBottom: 36 }}>
+                iPad Design · Navigation & Core Flow
               </span>
-            </h1>
-    
-          </div>
-          {/* Hero iPads */}
-          <div style={{ position: "relative", zIndex: 2, marginTop: 80, height: 480, display: "flex", gap: 40, justifyContent: "center", alignItems: "center", perspective: 1400 }}>
-            <HoverImage
-              dark="images/task-Events.png"
-              light="images/Events-LM.png"
-              alt="Moonware task management screen"
-              style={{ width: 520, transform: "rotate(-4deg) translateY(20px)" }}
-            />
-            <HoverImage
-              dark="images/Chat-flight.png"
-              light="images/Chat-flight-LM.png"
-              alt="Moonware chat screen"
-              style={{ width: 520, transform: "rotate(3deg) translateY(-20px)" }}
-            />
-          </div>
-        </section>
-      );
+              <h1 style={{ fontFamily: sans, fontWeight: 700, fontSize: "clamp(36px, 6.4vw, 92px)", lineHeight: 0.98, letterSpacing: "-0.04em", color: C.ink, maxWidth: 1040, margin: "0 auto 20px", textWrap: "balance" }}>
+                The iPad app that keeps ground operations moving —{" "}
+                <span style={{ fontFamily: serif, fontStyle: "italic", fontWeight: 400, color: C.ink }}>
+                  every gate, every shift, every minute.
+                </span>
+              </h1>
+            </div>
+            {/* Hero iPads */}
+            <div style={{ position: "relative", zIndex: 2, marginTop: isMobile ? 40 : 80, height: isMobile ? "auto" : 480, display: "flex", flexDirection: isMobile ? "column" : "row", gap: isMobile ? 24 : 40, justifyContent: "center", alignItems: "center", perspective: 1400 }}>
+              <HoverImage
+                dark="images/task-Events.png"
+                light="images/Events-LM.png"
+                alt="Moonware task management screen"
+                style={{ width: isMobile ? "90%" : 520, transform: isMobile ? "none" : "rotate(-4deg) translateY(20px)" }}
+              />
+              <HoverImage
+                dark="images/Chat-flight.png"
+                light="images/Chat-flight-LM.png"
+                alt="Moonware chat screen"
+                style={{ width: isMobile ? "90%" : 520, transform: isMobile ? "none" : "rotate(3deg) translateY(-20px)" }}
+              />
+            </div>
+          </section>
+        );
+      };
 
       /* ─── PROJECT OVERVIEW ───────────────────────────────────────────── */
-      const Overview = () => (
-        <section style={{ padding: "120px 64px", maxWidth: 1280, margin: "0 auto" }}>
-          <TwoCol
-            left={<SectionTitle>The <span style={{ fontFamily: serif, fontStyle: "italic", fontWeight: 400 }}>Problem</span></SectionTitle>}
-            right={<>
-              <Body size={19}>HALO was built for phones. Japan Airlines ran it on iPad Minis.</Body>
-              <Body size={19}>For a four-month proof of concept at Haneda Airport, I led the redesign of HALO's core operational workflows for the device ramp agents actually used in the field. The existing experience struggled to balance information density, visibility, and speed on a larger screen. Every extra tap slowed down a time-sensitive operation.</Body>
-              <Body size={19}>The redesign prioritized critical information at a glance, faster task completion, and reliability in environments most software never considers: bright tarmacs, dim hangars, gloved hands, limited battery life, and weather ranging from humid summers to freezing winters.</Body>
-              
-              
-            </>}
-          />
-          <div style={{ height: 80 }} />
-          <Rule />
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 40, padding: "40px 0" }}>
-            {[["Client","Japan Airlines (JAL)"],["My Role","Product Designer · Design Lead"],["Platform","iPad Mini"],["Tools","Figma · TestFlight · Confluence · XCode"]].map(([k, v]) => (
-              <div key={k}><Label>{k}</Label><div style={{ fontFamily: sans, fontSize: 17, color: C.ink, lineHeight: 1.5 }}>{v}</div></div>
-            ))}
-          </div>
-          <Rule />
-        </section>
-      );
+      const Overview = () => {
+        const isMobile = useIsMobile();
+        return (
+          <section style={{ padding: "var(--pad-v-lg) var(--pad-h)", maxWidth: 1280, margin: "0 auto" }}>
+            <TwoCol
+              left={<SectionTitle>The <span style={{ fontFamily: serif, fontStyle: "italic", fontWeight: 400 }}>Problem</span></SectionTitle>}
+              right={<>
+                <Body size={19}>HALO was built for phones. Japan Airlines ran it on iPad Minis.</Body>
+                <Body size={19}>For a four-month proof of concept at Haneda Airport, I led the redesign of HALO's core operational workflows for the device ramp agents actually used in the field. The existing experience struggled to balance information density, visibility, and speed on a larger screen. Every extra tap slowed down a time-sensitive operation.</Body>
+                <Body size={19}>The redesign prioritized critical information at a glance, faster task completion, and reliability in environments most software never considers: bright tarmacs, dim hangars, gloved hands, limited battery life, and weather ranging from humid summers to freezing winters.</Body>
+              </>}
+            />
+            <div style={{ height: isMobile ? 40 : 80 }} />
+            <Rule />
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "1fr 1fr 1fr 1fr", gap: isMobile ? 24 : 40, padding: "40px 0" }}>
+              {[["Client","Japan Airlines (JAL)"],["My Role","Product Designer · Design Lead"],["Platform","iPad Mini"],["Tools","Figma · TestFlight · Confluence · XCode"]].map(([k, v]) => (
+                <div key={k}><Label>{k}</Label><div style={{ fontFamily: sans, fontSize: 17, color: C.ink, lineHeight: 1.5 }}>{v}</div></div>
+              ))}
+            </div>
+            <Rule />
+          </section>
+        );
+      };
 
       
 
       /* ─── DESIGN PROCESS ─────────────────────────────────────────────── */
       const Process = () => {
+        const isMobile = useIsMobile();
         const steps = [
           { name: "Research",  color: "#A8C8F0", target: "phase-research"   },
           { name: "Define",    color: "#5B9ED6", target: "phase-synthesize" },
@@ -584,25 +598,27 @@
         }, []);
 
         const { w, centers } = arcData;
+        const circleSize = isMobile ? 68 : 110;
+        const labelSize  = isMobile ? 16 : 22;
 
         return (
-          <section style={{ padding: "60px 64px 120px", maxWidth: 1280, margin: "0 auto" }}>
-            <div style={{ background: C.card, borderRadius: 18, padding: "60px 48px", boxShadow: "0 2px 12px rgba(0,0,0,0.06)", position: "relative" }}>
+          <section style={{ padding: "var(--pad-v) var(--pad-h) var(--pad-v-lg)", maxWidth: 1280, margin: "0 auto" }}>
+            <div style={{ background: C.card, borderRadius: 18, padding: isMobile ? "32px 20px" : "60px 48px", boxShadow: "0 2px 12px rgba(0,0,0,0.06)", position: "relative" }}>
               <SectionTitle size={42}>My design <span style={{ fontFamily: serif, fontStyle: "italic", fontWeight: 400 }}>process</span></SectionTitle>
-              <div ref={rowRef} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 60, position: "relative" }}>
+              <div ref={rowRef} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: isMobile ? 36 : 60, position: "relative" }}>
                 {steps.map((s, i) => (
                   <Fragment key={s.name}>
                     <div ref={el => { circleRefs.current[i] = el; }} onClick={() => scrollTo(s.target)} style={{ textAlign: "center", flex: "0 0 auto", cursor: "pointer" }}>
-                      <div style={{ width: 110, height: 110, borderRadius: "50%", background: s.color, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontFamily: sans, fontWeight: 700, fontSize: 13, letterSpacing: "0.06em", textTransform: "uppercase", transition: "transform 0.2s, box-shadow 0.2s" }}
+                      <div style={{ width: circleSize, height: circleSize, borderRadius: "50%", background: s.color, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontFamily: sans, fontWeight: 700, fontSize: isMobile ? 10 : 13, letterSpacing: "0.06em", textTransform: "uppercase", transition: "transform 0.2s, box-shadow 0.2s" }}
                         onMouseEnter={e => { e.currentTarget.style.transform = "scale(1.08)"; e.currentTarget.style.boxShadow = `0 8px 24px rgba(0,0,0,0.15)`; }}
                         onMouseLeave={e => { e.currentTarget.style.transform = "scale(1)"; e.currentTarget.style.boxShadow = "none"; }}
                       >0{i + 1}</div>
-                      <div style={{ fontFamily: serif, fontStyle: "italic", fontSize: 22, color: s.color, marginTop: 14 }}>{s.name}</div>
+                      <div style={{ fontFamily: serif, fontStyle: "italic", fontSize: labelSize, color: s.color, marginTop: isMobile ? 8 : 14 }}>{s.name}</div>
                     </div>
-                    {i < steps.length - 1 && <div style={{ flex: 1, borderTop: `2px dashed ${C.rule}`, margin: "0 -10px", position: "relative", top: -22 }} />}
+                    {i < steps.length - 1 && <div style={{ flex: 1, borderTop: `2px dashed ${C.rule}`, margin: "0 -10px", position: "relative", top: isMobile ? -14 : -22 }} />}
                   </Fragment>
                 ))}
-                {w > 0 && centers.length === 4 && (
+                {!isMobile && w > 0 && centers.length === 4 && (
                   <svg
                     viewBox={`0 0 ${w} 80`}
                     preserveAspectRatio="none"
@@ -628,44 +644,53 @@
       };
 
       /* ─── RESEARCH ───────────────────────────────────────────────────── */
-      const Research = () => (
-        <section id="phase-research" style={{ padding: "60px 64px 120px", maxWidth: 1280, margin: "0 auto" }}>
-          <TwoCol
-            left={<><Label>Step One</Label><SectionTitle>Field Research</SectionTitle></>}
-            right={<Body size={19}>Research uncovered the operational information users needed most, the realities of working on the ramp, and the limitations of the existing mobile experience. These findings directly informed the navigation, information hierarchy, and landscape-first design of the iPad redesign.</Body>}
-          />
-
-          {/* Methods */}
-          <div style={{ marginTop: 80 }}>
+      const ResearchMethods = () => {
+        const isMobile = useIsMobile();
+        const methods = [
+          ["FIELD OBSERVATIONS",    "On-site visits with JAL ground operations and OCC teams",                "Observed ramp agents across active shifts",                                            "Documented environmental and device constraints"],
+          ["STAKEHOLDER WORKSHOPS", "Weekly meetings with operations leaders and airport stakeholders",        "Senior Director of Innovation & Emerging Technology and ops teams",                    "Defined priority information needed at a glance"],
+          ["WORKFLOW AUDIT",        "Analysis of existing mobile workflows and navigation patterns",           "Identified opportunities to reduce navigation depth and surface critical information faster", "Mapped high-frequency and time-critical workflows"],
+          ["PLATFORM RESEARCH",     "Investigation of iPad navigation conventions and tablet UX patterns",    "Evaluated how larger screen real estate could support operational tasks",               "Validated landscape-first requirements based on field usage"],
+        ];
+        return (
+          <div style={{ marginTop: isMobile ? 40 : 80 }}>
             <Label color={C.coral}>Research methods</Label>
-            <div style={{ background: C.card, borderRadius: 18, marginTop: 24, boxShadow: "0 2px 12px rgba(0,0,0,0.06)", display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr" }}>
-              {[
-                ["FIELD OBSERVATIONS",       "On-site visits with JAL ground operations and OCC teams",     "Observed ramp agents across active shifts", "Documented environmental and device constraints"],
-                ["STAKEHOLDER WORKSHOPS",      "Weekly meetings with operations leaders and airport stakeholders",   "Senior Director of Innovation & Emerging Technology and ops teams", "Defined priority information needed at a glance"],
-                ["WORKFLOW AUDIT",  "Analysis of existing mobile workflows and navigation patterns",    "Identified opportunities to reduce navigation depth and surface critical information faster", "Mapped high-frequency and time-critical workflows"],
-                ["PLATFORM RESEARCH",  "Investigation of iPad navigation conventions and tablet UX patterns",    "Evaluated how larger screen real estate could support operational tasks", "Validated landscape-first requirements based on field usage"]
-              ].map(([title, sub, detail1, detail2], i) => (
-                <div key={title} style={{ padding: 32, borderRight: i < 3 ? `1px solid ${C.rule}` : "none" }}>
-                  <div style={{ fontFamily: sans, fontWeight: 700, fontSize: 13, color: C.ink, letterSpacing: "0.04em", textTransform: "uppercase" }}>{title}</div>
-                  <div style={{ fontFamily: sans, fontSize: 14, color: C.ink2, marginTop: 12, lineHeight: 1.55 }}>{sub}</div>
+            <div style={{ background: C.card, borderRadius: 18, marginTop: 24, boxShadow: "0 2px 12px rgba(0,0,0,0.06)", display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "1fr 1fr 1fr 1fr" }}>
+              {methods.map(([title, sub, detail1, detail2], i) => (
+                <div key={title} style={{ padding: isMobile ? 18 : 32, borderRight: isMobile ? (i % 2 === 0 ? `1px solid ${C.rule}` : "none") : (i < 3 ? `1px solid ${C.rule}` : "none"), borderBottom: isMobile && i < 2 ? `1px solid ${C.rule}` : "none" }}>
+                  <div style={{ fontFamily: sans, fontWeight: 700, fontSize: isMobile ? 11 : 13, color: C.ink, letterSpacing: "0.04em", textTransform: "uppercase" }}>{title}</div>
+                  <div style={{ fontFamily: sans, fontSize: isMobile ? 13 : 14, color: C.ink2, marginTop: 12, lineHeight: 1.55 }}>{sub}</div>
                   <div style={{ fontFamily: sans, fontSize: 12, color: C.ink3, marginTop: 14, paddingTop: 14, borderTop: `1px solid ${C.rule}`, lineHeight: 1.5 }}>{detail1}</div>
                   <div style={{ fontFamily: sans, fontSize: 12, color: C.ink3, marginTop: 10, lineHeight: 1.5 }}>{detail2}</div>
                 </div>
               ))}
             </div>
           </div>
+        );
+      };
+
+      const Research = () => (
+        <section id="phase-research" style={{ padding: "var(--pad-v) var(--pad-h) var(--pad-v-lg)", maxWidth: 1280, margin: "0 auto" }}>
+          <TwoCol
+            left={<><Label>Step One</Label><SectionTitle>Field Research</SectionTitle></>}
+            right={<Body size={19}>Research uncovered the operational information users needed most, the realities of working on the ramp, and the limitations of the existing mobile experience. These findings directly informed the navigation, information hierarchy, and landscape-first design of the iPad redesign.</Body>}
+          />
+
+          {/* Methods */}
+          <ResearchMethods />
 
         </section>
       );
 
       /* ─── SYNTHESIZE ─────────────────────────────────────────────────── */
-      const Synthesize = () => (
-        <section id="phase-synthesize" style={{ padding: "60px 64px 120px", maxWidth: 1280, margin: "0 auto" }}>
+      const Synthesize = () => {
+        const isMobile = useIsMobile();
+        return (
+        <section id="phase-synthesize" style={{ padding: "var(--pad-v) var(--pad-h) var(--pad-v-lg)", maxWidth: 1280, margin: "0 auto" }}>
           <TwoCol
             left={<><Label>Step Two</Label><SectionTitle>Synthesize</SectionTitle></>}
             right={<>
               <Body size={19}>I synthesized research findings into a set of design priorities. The challenge wasn't simply adapting HALO to a larger screen—it was improving access to critical information, helping agents manage operational updates, and designing for the realities of field work. These insights guided the redesign.</Body>
-             
             </>}
           />
 
@@ -679,21 +704,24 @@
               ["Field conditions shaped usability.", "Direct sunlight, gloves, and long shifts created constraints rarely considered in traditional enterprise software."],
               ["Agents think beyond the current task.",   "Ramp crews wanted visibility into upcoming assignments so they could prepare equipment, coordinate work, and plan their shifts."],
             ].map(([title, desc], i) => (
-              <div key={i} style={{ display: "grid", gridTemplateColumns: "35fr 60fr", gap: 80, padding: "32px 0", borderTop: `1px solid ${C.rule}` }}>
-                <div style={{ background: C.card, borderRadius: 12, padding: 24, boxShadow: "0 2px 12px rgba(0,0,0,0.06)", fontFamily: serif, fontStyle: "italic", fontSize: 26, color: C.ink, lineHeight: 1.2, alignSelf: "start" }}>{title}</div>
+              <div key={i} style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "35fr 60fr", gap: isMobile ? 12 : 80, padding: "32px 0", borderTop: `1px solid ${C.rule}` }}>
+                <div style={{ background: C.card, borderRadius: 12, padding: 24, boxShadow: "0 2px 12px rgba(0,0,0,0.06)", fontFamily: serif, fontStyle: "italic", fontSize: isMobile ? 20 : 26, color: C.ink, lineHeight: 1.2, alignSelf: "start" }}>{title}</div>
                 <Body size={17}>{desc}</Body>
               </div>
             ))}
           </div>
         </section>
-      );
+        );
+      };
 
       /* ─── FIELD QUOTES (VALIDATE) ────────────────────────────────────── */
-      const FieldQuotes = () => (
-        <section style={{ padding: "60px 64px 120px", maxWidth: 1280, margin: "0 auto" }}>
+      const FieldQuotes = () => {
+        const isMobile = useIsMobile();
+        return (
+        <section style={{ padding: "var(--pad-v) var(--pad-h) var(--pad-v-lg)", maxWidth: 1280, margin: "0 auto" }}>
           <Label color={C.coral}>From the field</Label>
           <SectionTitle size={42}>The agents, in <span style={{ fontFamily: serif, fontStyle: "italic", fontWeight: 400 }}>their own words</span></SectionTitle>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, marginTop: 40 }}>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 24, marginTop: 40 }}>
             {[
               "I know the assignment can change, but I still want to know what's planned next.",
               "When I'm outside, I have to turn the brightness all the way up just to read the screen. The battery was down to 30% in less than 3 hours.",
@@ -709,20 +737,22 @@
             ))}
           </div>
         </section>
-      );
+        );
+      };
 
       /* ─── PERSONAS ───────────────────────────────────────────────────── */
       const Personas = () => {
+        const isMobile = useIsMobile();
         const personas = [
           { name: "The Ramp Agent",          meta: "Front-line · gloves on · screen down",    bg: "#EEF5FD",                                 bgText: "First shift starts before sunrise. Tasks come fast — fueling, baggage, towing — and the iPad gets checked in one-second glances between them. Screen brightness turned down to save battery. Notifications piling up, most of them irrelevant.", goals: ["See the next task without unlocking","Acknowledge with a gloved tap","Trust that on-screen matches the radio"], needs: ["Glanceable times on the card itself","Sunlight-legible light mode","Battery-conscious rendering"],     challenges: ["Cold/wet hands, cotton gloves","Dimmed brightness all shift","Reassignment buried in pings"] },
           
           { name: "The Lead (LM)",           meta: "Catches what falls through",              bg: "#DDEAF8",                                 bgText: "The person who catches what falls through. When a task goes unassigned, when crew numbers don't meet airline requirements, when someone shows up at the wrong stand — it lands on the LM. They need to see the full picture of a turnaround fast.", goals: ["Full turnaround visibility in one view","Quick adjustments that propagate","Stay in sync with the radio"], needs: ["Aircraft-level overview","Acknowledged change history","Crew requirements flagged live"],        challenges: ["Accountability for blind spots","Decisions in seconds","No room for stale data"] },
         ];
         return (
-          <section style={{ padding: "60px 64px 120px", maxWidth: 1280, margin: "0 auto" }}>
+          <section style={{ padding: "var(--pad-v) var(--pad-h) var(--pad-v-lg)", maxWidth: 1280, margin: "0 auto" }}>
             <SectionTitle size={48}>User <span style={{ fontFamily: serif, fontStyle: "italic", fontWeight: 400 }}>personas</span></SectionTitle>
             <Body size={19}>Two distict user groups were considered while redesigning the app. </Body>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, marginTop: 32, maxWidth: 900, margin: "32px auto 0" }}>
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 24, marginTop: 32, maxWidth: 900, margin: "32px auto 0" }}>
               {personas.map((p) => (
                 <div key={p.name} style={{ background: C.card, borderRadius: 18, overflow: "hidden", boxShadow: "0 2px 12px rgba(0,0,0,0.06)", display: "flex", flexDirection: "column" }}>
                   <div style={{ background: p.bg, padding: 24, position: "relative", minHeight: 200 }}>
@@ -751,7 +781,7 @@
 
       /* ─── POV / HMW ──────────────────────────────────────────────────── */
       const POVHMW = () => (
-        <section style={{ padding: "60px 64px 120px", maxWidth: 1280, margin: "0 auto" }}>
+        <section style={{ padding: "var(--pad-v) var(--pad-h) var(--pad-v-lg)", maxWidth: 1280, margin: "0 auto" }}>
           <TwoCol
             left={<><Label>POV</Label><SectionTitle size={48}>Points of <span style={{ fontFamily: serif, fontStyle: "italic", fontWeight: 400 }}>view</span></SectionTitle></>}
             right={
@@ -791,6 +821,7 @@
 
       /* ─── PROJECT GOALS (PRIORITIES) ────────────────────────────────── */
       const Goals = () => {
+        const isMobile = useIsMobile();
         const priorities = [
           {
             no: "01", railBg: "#EEF5FD", darkText: false,
@@ -835,26 +866,26 @@
         ];
 
         return (
-          <section style={{ padding: "60px 64px 120px", maxWidth: 1280, margin: "0 auto" }}>
+          <section style={{ padding: "var(--pad-v) var(--pad-h) var(--pad-v-lg)", maxWidth: 1280, margin: "0 auto" }}>
             <TwoCol
               left={<SectionTitle size={48}>What we <span style={{ fontFamily: serif, fontStyle: "italic", fontWeight: 400 }}>prioritized</span></SectionTitle>}
               right={<Body size={19}> The research revealed a wide range of challenges, but not all of them could be solved at once. To focus the redesign, I aligned user needs, business goals, and engineering constraints into four key priorities..</Body>}
             />
             <div style={{ marginTop: 60, display: "flex", flexDirection: "column", gap: 24 }}>
               {priorities.map((p) => (
-                <div key={p.no} style={{ background: C.card, borderRadius: 18, boxShadow: "0 2px 12px rgba(0,0,0,0.06)", display: "grid", gridTemplateColumns: "300px 1fr", overflow: "hidden" }}>
+                <div key={p.no} style={{ background: C.card, borderRadius: 18, boxShadow: "0 2px 12px rgba(0,0,0,0.06)", display: "grid", gridTemplateColumns: isMobile ? "1fr" : "300px 1fr", overflow: "hidden" }}>
                   {/* Rail */}
-                  <div style={{ padding: 40, display: "flex", flexDirection: "column", justifyContent: "space-between", borderRight: `1px solid ${C.rule}`, background: p.railBg }}>
+                  <div style={{ padding: isMobile ? "28px 24px" : 40, display: "flex", flexDirection: "column", justifyContent: "space-between", borderRight: isMobile ? "none" : `1px solid ${C.rule}`, borderBottom: isMobile ? `1px solid ${C.rule}` : "none", background: p.railBg }}>
                     <div style={{ fontFamily: sans, fontSize: 13, fontWeight: 600, letterSpacing: "0.18em", textTransform: "uppercase", color: C.coral }}>
                       Priority <span>{p.no}</span>
                     </div>
                     <div style={{ fontFamily: serif, fontStyle: "italic", fontSize: 32, lineHeight: 1.12, marginTop: 40, color: C.ink }}>{p.heading}</div>
                   </div>
                   {/* Body */}
-                  <div style={{ padding: 40 }}>
+                  <div style={{ padding: isMobile ? "24px" : 40 }}>
                     <p style={{ fontFamily: sans, fontSize: 17, lineHeight: 1.6, color: C.ink2, margin: "0 0 16px" }}>{p.desc}</p>
                     <div style={{ fontFamily: sans, fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase", color: C.ink3, fontWeight: 600, margin: "28px 0 14px" }}>Drivers</div>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 20 }}>
+                    <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: 20 }}>
                       {p.drivers.map((d) => (
                         <div key={d.role} style={{ paddingTop: 16, borderTop: `1px solid ${C.rule}` }}>
                           <div style={{ fontFamily: sans, fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: C.coral, marginBottom: 8 }}>{d.role}</div>
@@ -872,7 +903,7 @@
 
       /* ─── USER FLOW ──────────────────────────────────────────────────── */
       const Flow = () => (
-        <section style={{ padding: "60px 64px 120px", maxWidth: 1280, margin: "0 auto" }}>
+        <section style={{ padding: "var(--pad-v) var(--pad-h) var(--pad-v-lg)", maxWidth: 1280, margin: "0 auto" }}>
           <TwoCol
             left={<SectionTitle size={48}>Turnaround <span style={{ fontFamily: serif, fontStyle: "italic", fontWeight: 400 }}>flow</span></SectionTitle>}
             right={<Body size={19}>I mapped the turnaround — the choreography from arrival to pushback — across all three roles, surfacing the handoffs where information loss happened most.</Body>}
@@ -947,8 +978,9 @@
           ]},
         ];
 
+        const isMobile = useIsMobile();
         return (
-          <section style={{ padding: "60px 64px 120px", maxWidth: 1280, margin: "0 auto" }}>
+          <section style={{ padding: "var(--pad-v) var(--pad-h) var(--pad-v-lg)", maxWidth: 1280, margin: "0 auto" }}>
             <TwoCol
               left={<SectionTitle size={48}>Branding & <span style={{ fontFamily: serif, fontStyle: "italic", fontWeight: 400 }}>system</span></SectionTitle>}
               right={<>
@@ -957,7 +989,7 @@
                 <Body size={17}><strong style={{ color: C.ink, fontWeight: 600 }}>Components:</strong> Built on a shared token graph and documented for engineering handoff — every component wired to the same semantic layer so the iPad and mobile apps share a single source of truth.</Body>
               </>}
             />
-            <div style={{ marginTop: 60, background: C.card, borderRadius: 18, padding: 40, boxShadow: "0 2px 12px rgba(0,0,0,0.06)", display: "grid", gridTemplateColumns: "1.3fr 1fr 0.75fr", gap: 48 }}>
+            <div style={{ marginTop: 60, background: C.card, borderRadius: 18, padding: isMobile ? "28px 20px" : 40, boxShadow: "0 2px 12px rgba(0,0,0,0.06)", display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1.3fr 1fr 0.75fr", gap: isMobile ? 40 : 48 }}>
 
               {/* ── Theme tokens: actual palette strips ── */}
               <div>
@@ -1019,7 +1051,7 @@
       /* ─── HIGH FIDELITY ──────────────────────────────────────────────── */
       /* ─── DESIGN (STEP THREE) ───────────────────────────────────────── */
       const Design = () => (
-        <section id="phase-design" style={{ padding: "60px 64px 120px", maxWidth: 1280, margin: "0 auto" }}>
+        <section id="phase-design" style={{ padding: "var(--pad-v) var(--pad-h) var(--pad-v-lg)", maxWidth: 1280, margin: "0 auto" }}>
           <TwoCol
             left={<><Label>Step Three</Label><SectionTitle>Design</SectionTitle></>}
             right={<>
@@ -1031,7 +1063,7 @@
 
       /* ─── VALIDATE (STEP FOUR) ──────────────────────────────────────── */
       const Validate = () => (
-        <section id="phase-validate" style={{ padding: "60px 64px 120px", maxWidth: 1280, margin: "0 auto" }}>
+        <section id="phase-validate" style={{ padding: "var(--pad-v) var(--pad-h) var(--pad-v-lg)", maxWidth: 1280, margin: "0 auto" }}>
           <TwoCol
             left={<><Label>Step Four</Label><SectionTitle>Review & Validate</SectionTitle></>}
             right={<>
@@ -1093,6 +1125,7 @@
       /* ─── BEFORE & AFTER ─────────────────────────────────────────────── */
       const BeforeAfter = () => {
         const [lightbox, setLightbox] = useState(null);
+        const isMobile = useIsMobile();
 
         const items = [
           { title: "Tablet-first navigation",  desc: "The original experience was largely inherited from mobile, leaving much of the iPad's screen space underutilized. A new two-column layout and navigation model were designed specifically for landscape-oriented tablet workflows, allowing agents and turnaround leads to view operational context alongside detailed information without excessive navigation.", images: ["images/chat.png", "images/Map.png"] },
@@ -1102,11 +1135,11 @@
         ];
 
         return (
-          <section style={{ padding: "60px 64px 120px", maxWidth: 1280, margin: "0 auto" }}>
+          <section style={{ padding: "var(--pad-v) var(--pad-h) var(--pad-v-lg)", maxWidth: 1280, margin: "0 auto" }}>
             {lightbox && <Lightbox src={lightbox} onClose={() => setLightbox(null)} />}
             <SectionTitle size={48}>Design <span style={{ fontFamily: serif, fontStyle: "italic", fontWeight: 400 }}>solutions</span></SectionTitle>
             {items.map((it, i) => (
-              <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 32, alignItems: "center", padding: "48px 0", borderTop: `1px solid ${C.rule}` }}>
+              <div key={i} style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: isMobile ? 20 : 32, alignItems: "center", padding: "48px 0", borderTop: `1px solid ${C.rule}` }}>
                 <div>
                   <Label>0{i+1}</Label>
                   <div style={{ fontFamily: serif, fontStyle: "italic", fontSize: 30, color: C.ink, marginBottom: 14, lineHeight: 1.15 }}>{it.title}</div>
@@ -1148,10 +1181,12 @@
       };
 
       /* ─── RESULTS ────────────────────────────────────────────────────── */
-      const Results = () => (
-        <section style={{ padding: "60px 64px 120px", maxWidth: 1280, margin: "0 auto" }}>
+      const Results = () => {
+        const isMobile = useIsMobile();
+        return (
+        <section style={{ padding: "var(--pad-v) var(--pad-h) var(--pad-v-lg)", maxWidth: 1280, margin: "0 auto" }}>
           <SectionTitle size={48}>Results</SectionTitle>
-          <div style={{ display: "grid", gridTemplateColumns: "auto auto auto 1fr", gap: 32, alignItems: "center", marginTop: 60 }}>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "auto auto auto 1fr", gap: 32, alignItems: "center", marginTop: 60 }}>
           
             <div style={{ maxWidth: 360 }}>
               <Body size={17}>The designed iPad app shipped to JAL ground ops at Tokyo Haneda (HND) in Q4 2025. The response was strong enough that JAL vouched for Moonware to key investors and extended the PoC to Okinawa & Narita — moving toward broader implementation across a larger network, working directly with JAL IT to scale.</Body>
@@ -1180,7 +1215,8 @@
             </div>
           </div>
         </section>
-      );
+        );
+      };
 
       /* ─── FINAL MOCKUP ───────────────────────────────────────────────── */
       const FinalMockup = () => {
@@ -1256,7 +1292,7 @@
 
       /* ─── FOOTER ─────────────────────────────────────────────────────── */
       const Footer = () => (
-        <footer data-cursor="footer" style={{ padding: "120px 64px 48px", borderTop: `1px solid ${C.rule}`, maxWidth: 1280, margin: "0 auto" }}>
+        <footer data-cursor="footer" style={{ padding: "var(--pad-v-lg) var(--pad-h) 48px", borderTop: `1px solid ${C.rule}`, maxWidth: 1280, margin: "0 auto" }}>
           <div style={{ fontFamily: sans, fontWeight: 700, fontSize: "clamp(56px, 9vw, 140px)", letterSpacing: "-0.05em", lineHeight: 0.92, marginBottom: 60 }}>
             Want to see <span style={{ color: C.coral, fontFamily: serif, fontStyle: "italic", fontWeight: 400 }}>more</span>?
           </div>
@@ -1285,6 +1321,7 @@
       const CaseStudy = () => {
         const containerRef = useRef(null);
         const [showTop, setShowTop] = useState(false);
+        const [isMobile, setIsMobile] = useState(window.innerWidth < 680);
 
         useEffect(() => {
           const onScroll = () => setShowTop(window.scrollY > 400);
@@ -1292,7 +1329,14 @@
           return () => window.removeEventListener("scroll", onScroll);
         }, []);
 
+        useEffect(() => {
+          const fn = () => setIsMobile(window.innerWidth < 680);
+          window.addEventListener("resize", fn);
+          return () => window.removeEventListener("resize", fn);
+        }, []);
+
         return (
+          <MobileCtx.Provider value={isMobile}>
           <div ref={containerRef} data-cursor="default" style={{ background: C.bg, color: C.ink, position: "relative" }}>
             {/* <ColorCursor containerRef={containerRef} /> */}
             <GlobalNav onNavigate={(t) => { window.location.href = t === "home" ? "index.html" : `index.html#${t}`; }} />
@@ -1315,14 +1359,14 @@
             <FinalMockup />
 
             {/* Prev / Next */}
-            <section style={{ padding: "60px 64px 80px", maxWidth: 1280, margin: "0 auto" }}>
+            <section style={{ padding: "var(--pad-v) var(--pad-h) 80px", maxWidth: 1280, margin: "0 auto" }}>
               <Rule />
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, paddingTop: 48 }}>
                 <a href="halo-design-system.html" data-cursor="link" style={{ textDecoration: "none", color: "inherit" }}>
                   <Label>← Previous</Label>
                   <div style={{ fontFamily: serif, fontStyle: "italic", fontSize: 36, color: C.ink, lineHeight: 1.1 }}>Cross-Platform Design System</div>
                 </a>
-                <a href="wfs-product-definition.html" data-cursor="link" style={{ textDecoration: "none", color: "inherit", textAlign: "right" }}>
+                <a href="product-definition.html" data-cursor="link" style={{ textDecoration: "none", color: "inherit", textAlign: "right" }}>
                   <Label>Next case study →</Label>
                   <div style={{ fontFamily: serif, fontStyle: "italic", fontSize: 36, color: C.coral, lineHeight: 1.1 }}>Stakeholder-to-Feature Pipeline</div>
                 </a>
@@ -1339,6 +1383,7 @@
               </button>
             )}
           </div>
+          </MobileCtx.Provider>
         );
       };
 
