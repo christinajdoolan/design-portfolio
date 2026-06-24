@@ -522,7 +522,9 @@
         }, []);
         return (
           <MobileCtx.Provider value={isMobile}><LandscapeCtx.Provider value={isLandscape}>
-          <div ref={containerRef} data-cursor="default" style={{ background:C.bg, minHeight:"100vh", color:C.ink, position:"relative" }}>
+          <div style={{ height: "100vh", display: "flex", flexDirection: "column" }}>
+          <main style={{ flex: 1, overflowY: "auto", overflowX: "hidden", position: "relative" }}>
+          <div ref={containerRef} data-cursor="default" style={{ background:C.bg, color:C.ink, position:"relative" }}>
             <Nav />
             <Hero containerRef={containerRef} />
             <Overview />
@@ -535,6 +537,7 @@
             <NextUp />
             <Footer />
           </div>
+          </main></div>
           </LandscapeCtx.Provider></MobileCtx.Provider>
         );
       };

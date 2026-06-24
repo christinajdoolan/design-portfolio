@@ -1366,6 +1366,8 @@
 
         return (
           <MobileCtx.Provider value={isMobile}><LandscapeCtx.Provider value={isLandscape}>
+          <div style={{ height: "100vh", display: "flex", flexDirection: "column" }}>
+          <main style={{ flex: 1, overflowY: "auto", overflowX: "hidden", position: "relative" }}>
           <div ref={containerRef} style={{ background: C.bg, color: C.ink, position: "relative" }}>
             <GlobalNav onNavigate={(t) => { window.location.href = t === "home" ? "index.html" : `index.html#${t}`; }} />
             <Hero containerRef={containerRef} />
@@ -1390,6 +1392,7 @@
               </button>
             )}
           </div>
+          </main></div>
           </LandscapeCtx.Provider></MobileCtx.Provider>
         );
       };
