@@ -521,14 +521,30 @@
         const isMobile = useIsMobile();
 
         useEffect(() => {
-          const timer = setInterval(() => {
+          MODE_PAIRS.forEach(p => {
+            [p.dark, p.light].forEach(src => { const img = new Image(); img.src = src; });
+          });
+        }, []);
+
+        useEffect(() => {
+          const advance = () => {
             setFade(false);
-            setTimeout(() => { setIdx(i => (i + 1) % MODE_PAIRS.length); setFade(true); }, 300);
-          }, 3500);
+            setTimeout(() => {
+              setIdx(i => (i + 1) % MODE_PAIRS.length);
+              requestAnimationFrame(() => requestAnimationFrame(() => setFade(true)));
+            }, 420);
+          };
+          const timer = setInterval(advance, 4000);
           return () => clearInterval(timer);
         }, []);
 
-        const goTo = (i) => { setFade(false); setTimeout(() => { setIdx(i); setFade(true); }, 300); };
+        const goTo = (i) => {
+          setFade(false);
+          setTimeout(() => {
+            setIdx(i);
+            requestAnimationFrame(() => requestAnimationFrame(() => setFade(true)));
+          }, 420);
+        };
         const pair = MODE_PAIRS[idx];
 
         return (
@@ -539,7 +555,7 @@
             </div>
             <div style={{ marginTop: 60 }}>
               {isMobile ? (
-                <div style={{ display: "flex", flexDirection: "column", gap: 16, opacity: fade ? 1 : 0, transition: "opacity 0.3s ease" }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 16, opacity: fade ? 1 : 0, transition: "opacity 0.42s ease", willChange: "opacity" }}>
                   {[["Dark mode", pair.dark, false], ["Light mode", pair.light, true]].map(([label, src, isLight]) => (
                     <div key={label}>
                       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
@@ -567,7 +583,7 @@
                       </div>
                     ))}
                   </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, opacity: fade ? 1 : 0, transition: "opacity 0.3s ease" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, opacity: fade ? 1 : 0, transition: "opacity 0.42s ease", willChange: "opacity" }}>
                     {[pair.dark, pair.light].map((src, si) => (
                       <div key={si} style={{ background: "#EBEDF0", borderRadius: 18, overflow: "hidden", border: si === 1 ? `1px solid ${C.rule}` : "none", display: "flex", alignItems: "center", justifyContent: "center", height: 520 }}>
                         <img src={src} alt={si === 0 ? `${pair.label} dark` : `${pair.label} light`}
@@ -1176,7 +1192,7 @@
 
               {/* 02 SPEC SHEETS — carousel */}
               <IZone n="02" label="Spec sheets" note="components, assembled into product">
-                <div style={{ opacity: fade ? 1 : 0, transition: "opacity 0.3s ease" }}>
+                <div style={{ opacity: fade ? 1 : 0, transition: "opacity 0.42s ease", willChange: "opacity" }}>
                   <div style={{ background: IM.mat, borderRadius: 14, overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", height: isMobile ? 320 : 600 }}>
                     <img
                       src={SPEC_SCREENS[idx]}
